@@ -1,11 +1,11 @@
 {
-  "title": "Infobytes blog",
+  "title": "Infobytes Blog",
   "category": "other",
-  "description": "A home for opportunities and articles, shared to WhatsApp.",
+  "description": "A home for opportunities and articles.",
   "tools": [
     "Astro",
     "Decap CMS"
   ],
-  "link": "",
-  "date": "2026-10-12T09:00:00.000Z"
+  "link": "theceo.dev/infobytes",
+  "date": ""
 }

@@ -1,0 +1,4 @@
+---
+const { img, i = 0, wide = false } = Astro.props;
+---
+<div class={'cv ' + (img ? '' : 'a' + (i % 3)) + (wide ? ' wide' : '')}>{img && <img src={img} alt="" style="width:100%;height:100%;object-fit:cover" />}</div>

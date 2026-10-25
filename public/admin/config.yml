@@ -1,0 +1,189 @@
+backend:
+  name: github
+  repo: YOUR-GITHUB-USERNAME/YOUR-REPO-NAME
+  branch: main
+  base_url: https://theceo.dev
+  auth_endpoint: api/auth
+local_backend: true
+publish_mode: simple
+media_folder: public/uploads
+public_folder: /uploads
+collections:
+  - name: site
+    label: Site settings
+    files:
+      - name: settings
+        label: Portfolio text, links and photo
+        file: src/content/settings.json
+        fields:
+      - {label: Full name, name: name, widget: string}
+      - {label: Short name (phones), name: short_name, widget: string}
+      - {label: Headline, name: headline, widget: string}
+      - {label: Menu: About, name: nav_about, widget: string}
+      - {label: Menu: My work, name: nav_work, widget: string}
+      - {label: Menu: Services, name: nav_services, widget: string}
+      - {label: Menu: Stack, name: nav_stack, widget: string}
+      - {label: Menu: Blog, name: nav_blog, widget: string}
+      - {label: Menu: Infobytes, name: nav_infobytes, widget: string}
+      - {label: Menu: CV, name: nav_cv, widget: string}
+      - {label: Menu: Contact, name: nav_contact, widget: string}
+      - {label: Title: About, name: about_title, widget: string}
+      - {label: Title: My work, name: work_title, widget: string}
+      - {label: Title: Services, name: services_title, widget: string}
+      - {label: Title: Stack, name: stack_title, widget: string}
+      - {label: Tab: About, name: tab_about, widget: string}
+      - {label: Tab: Experience, name: tab_experience, widget: string}
+      - {label: Tab: Certifications, name: tab_certs, widget: string}
+      - {label: Contact block title, name: cta_title, widget: string}
+      - {label: Contact block text, name: cta_text, widget: text}
+      - {label: CV bar title, name: cv_title, widget: string}
+      - {label: CV button label, name: cv_button, widget: string}
+      - {label: Footer text, name: footer, widget: string}
+      - {label: WhatsApp number (digits only), name: whatsapp, widget: string}
+      - {label: LinkedIn link, name: linkedin, widget: string}
+      - {label: X link, name: x, widget: string}
+      - {label: GitHub link, name: github, widget: string}
+      - {label: Blog address, name: blog_url, widget: string}
+      - {label: Infobytes address, name: infobytes_url, widget: string}
+      - {label: Search title, name: seo_title, widget: string}
+      - {label: Search description, name: seo_description, widget: text}
+      - {label: Photo, name: photo, widget: image}
+      - {label: CV (PDF). Leave empty to hide the CV button, name: cv, widget: file, required: false}
+      - name: site
+        label: Ads, contact and Blog / Infobytes settings
+        file: src/content/site.json
+        fields:
+      - {label: Contact email (optional), name: contact_email, widget: string, required: false}
+      - {label: AdSense publisher ID (ca-pub-...), name: adsense_client, widget: string, required: false}
+      - {label: Show ads on Blog and Infobytes, name: ads_enabled, widget: boolean, default: false}
+      - {label: AdSense ad unit ID, name: ad_slot, widget: string, required: false}
+      - {label: "Newsletter: sign-up page link (easiest - paste your newsletter tool sign-up page link here)", name: newsletter_link, widget: string, required: false}
+      - {label: "Newsletter: form address (advanced, only if you want the email box on the site)", name: newsletter_form_action, widget: string, required: false}
+      - {label: "Newsletter: email field name (advanced, for example email)", name: newsletter_email_name, widget: string, required: false}
+      - {label: "Newsletter: button text", name: newsletter_button, widget: string}
+      - {label: "Infobytes box title", name: newsletter_title_info, widget: string}
+      - {label: "Infobytes box text", name: newsletter_text_info, widget: text}
+      - {label: "Blog box title", name: newsletter_title_blog, widget: string}
+      - {label: "Blog box text", name: newsletter_text_blog, widget: text}
+      - {label: Infobytes logo, name: infobytes_logo, widget: image, required: false}
+      - {label: Blog search title, name: blog_title, widget: string}
+      - {label: Blog search description, name: blog_description, widget: text}
+      - {label: Infobytes search title, name: infobytes_title, widget: string}
+      - {label: Infobytes search description, name: infobytes_description, widget: text}
+      - name: about
+        label: About text
+        file: src/content/about.json
+        fields:
+          - label: Paragraphs
+            name: paragraphs
+            widget: list
+            field: {label: Paragraph, name: p, widget: text}
+      - name: services
+        label: Services list
+        file: src/content/services.json
+        fields:
+          - label: Services
+            name: items
+            widget: list
+            fields:
+              - {label: Title, name: title, widget: string}
+              - {label: Description, name: text, widget: text}
+      - name: stack
+        label: Stack tools
+        file: src/content/stack.json
+        fields:
+          - label: Tools
+            name: tools
+            widget: list
+            fields:
+              - {label: Name, name: name, widget: string}
+              - {label: Logo colour (hex, optional), name: color, widget: string, required: false}
+  - name: projects
+    label: Projects
+    folder: src/content/projects
+    create: true
+    extension: json
+    format: json
+    identifier_field: title
+    fields:
+      - {label: Title, name: title, widget: string}
+      - label: Category
+        name: category
+        widget: select
+        options: [{label: Analysis projects, value: analysis}, {label: Automation projects, value: automation}, {label: Other projects built, value: other}]
+      - {label: Description, name: description, widget: text}
+      - {label: Tools, name: tools, widget: list, field: {label: Tool, name: tool, widget: string}, required: false}
+      - {label: Link (optional), name: link, widget: string, required: false}
+      - {label: Date added (newest shows first), name: date, widget: datetime, required: false}
+  - name: experience
+    label: Experience
+    folder: src/content/experience
+    create: true
+    extension: json
+    format: json
+    identifier_field: role
+    fields:
+      - {label: Role, name: role, widget: string}
+      - {label: Organisation, name: org, widget: string}
+      - {label: Start (YYYY-MM), name: start, widget: string, required: false}
+      - {label: End (YYYY-MM or Present), name: end, widget: string, required: false}
+      - {label: Description, name: description, widget: text}
+  - name: certifications
+    label: Certifications
+    folder: src/content/certifications
+    create: true
+    extension: json
+    format: json
+    identifier_field: name
+    fields:
+      - {label: Name, name: name, widget: string}
+      - {label: Issuer, name: issuer, widget: string}
+      - {label: Year, name: year, widget: string}
+      - {label: Credential link, name: link, widget: string, required: false}
+  - name: posts
+    label: Blog posts
+    folder: src/content/posts
+    create: true
+    extension: md
+    format: frontmatter
+    identifier_field: title
+    fields:
+      - {label: Title, name: title, widget: string}
+      - {label: Date, name: date, widget: datetime}
+      - {label: Category (for example Data), name: category, widget: string}
+      - {label: Cover image (optional), name: image, widget: image, required: false}
+      - {label: Short description (optional), name: description, widget: text, required: false}
+      - {label: Article, name: body, widget: markdown}
+  - name: opportunities
+    label: Infobytes opportunities
+    folder: src/content/opportunities
+    create: true
+    extension: md
+    format: frontmatter
+    identifier_field: title
+    fields:
+      - {label: Title, name: title, widget: string}
+      - label: Category
+        name: category
+        widget: select
+        options: [Tech, Scholarships, Jobs, Fellowships, Other]
+      - {label: Organisation, name: organization, widget: string}
+      - {label: Deadline, name: deadline, widget: datetime, date_format: "YYYY-MM-DD", time_format: false, format: "YYYY-MM-DD"}
+      - {label: Location, name: location, widget: string}
+      - {label: Type (for example Full-time), name: type, widget: string}
+      - {label: Image (optional), name: image, widget: image, required: false}
+      - {label: Apply link, name: apply_url, widget: string, required: false}
+      - {label: Short summary for search (optional), name: description, widget: text, required: false}
+      - {label: Details (use ## headings), name: body, widget: markdown}
+  - name: pages
+    label: Pages (About, Contact, Privacy, Terms, Disclaimer)
+    folder: src/content/pages
+    create: false
+    delete: false
+    extension: md
+    format: frontmatter
+    identifier_field: title
+    fields:
+      - {label: Title, name: title, widget: string}
+      - {label: Last updated (text), name: updated, widget: string}
+      - {label: Content, name: body, widget: markdown}

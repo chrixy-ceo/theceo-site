@@ -1,0 +1,11 @@
+{
+  "title": "Form auto-filler",
+  "category": "automation",
+  "description": "A Selenium script that fills and submits Google Forms from a spreadsheet.",
+  "tools": [
+    "Python",
+    "Selenium"
+  ],
+  "link": "",
+  "date": "2026-10-17T09:00:00.000Z"
+}

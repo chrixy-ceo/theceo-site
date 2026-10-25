@@ -1,0 +1,13 @@
+---
+import Shell from '../layouts/Shell.astro';
+import s from '../content/settings.json';
+import site from '../content/site.json';
+export function getStaticPaths() { const m = import.meta.glob('../content/pages/*.md', { eager: true }); return Object.entries(m).map(([f, x]) => ({ params: { slug: f.split('/').pop().replace('.md', '') }, props: { fm: x.frontmatter, Content: x.Content } })); }
+const { fm, Content } = Astro.props;
+const { slug } = Astro.params;
+---
+<Shell title={fm.title + ' | ' + s.name} desc={fm.title} ads={false}>
+<article class="ar2" style="max-width:720px"><h1>{fm.title}</h1>{fm.updated && <p class="meta">Last updated: {fm.updated}</p>}<Content />
+{slug == 'contact' && <div class="sh row"><a class="btn p" href={`https://wa.me/${s.whatsapp}`} target="_blank" rel="noopener">WhatsApp</a>{site.contact_email && <a class="btn" href={`mailto:${site.contact_email}`}>Email</a>}<a class="btn" href={s.linkedin} target="_blank" rel="noopener">LinkedIn</a><a class="btn" href={s.x} target="_blank" rel="noopener">X</a><a class="btn" href={s.github} target="_blank" rel="noopener">GitHub</a></div>}
+</article>
+</Shell>

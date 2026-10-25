@@ -1,6 +1,6 @@
 backend:
   name: github
-  repo: YOUR-GITHUB-USERNAME/YOUR-REPO-NAME
+  repo: chrixy-ceo/theceo-site
   branch: main
   base_url: https://theceo.dev
   auth_endpoint: api/auth

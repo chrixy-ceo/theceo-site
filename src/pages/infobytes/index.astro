@@ -7,7 +7,7 @@ import { ops } from '../../lib/ops.js';
 const OPS = ops.map(({ Content, ...o }) => o);
 const LOGO = site.infobytes_logo || '';
 ---
-<Shell title={site.infobytes_title} desc={site.infobytes_description} header={false} active="info">
+<Shell title={site.infobytes_title} desc={site.infobytes_description} image={site.infobytes_og_image} header={false} active="info">
 <div class="ih">{LOGO ? <img class="lg" src={LOGO} alt="Infobytes logo" /> : <div class="lg mk">Ib</div>}<div><h2>Infobytes</h2></div><button class="btn tgl" id="th2" aria-label="Toggle light and dark theme">◐</button></div>
 <Newsletter where="info" />
 <div class="ctl"><input id="q" type="search" placeholder="Search opportunities" aria-label="Search opportunities" /><div class="fl" id="chips"></div></div>

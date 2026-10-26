@@ -8,7 +8,7 @@ export function getStaticPaths() { return posts.map((p, i) => ({ params: { slug:
 const { p, i } = Astro.props;
 const { Content } = p;
 ---
-<Shell title={p.title} desc={p.description || ''} active="blog">
+<Shell title={p.title} desc={p.description || p.excerpt || ''} image={p.og_image || p.image} type="article" active="blog">
 <a class="bk" href="/blog/">← Back to Blog</a>
 <Cover img={p.image} i={i} wide={true} />
 <AdSlot />

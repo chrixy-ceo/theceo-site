@@ -6,4 +6,4 @@ import { posts } from '../../../lib/posts.js';
 export function getStaticPaths() { const t = Math.ceil(posts.length / 5); return Array.from({ length: Math.max(0, t - 1) }, (_, i) => ({ params: { n: String(i + 2) } })); }
 const { n } = Astro.params;
 ---
-<Shell title={site.blog_title + ' – page ' + n} desc={site.blog_description} active="blog"><BlogList n={+n} /></Shell>
+<Shell title={site.blog_title + ' – page ' + n} desc={site.blog_description} image={site.blog_og_image} active="blog"><BlogList n={+n} /></Shell>

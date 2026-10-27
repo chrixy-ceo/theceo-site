@@ -1,0 +1,21 @@
+---
+import Cover from './Cover.astro';
+import AdSlot from './AdSlot.astro';
+import Newsletter from './Newsletter.astro';
+import BlogMenu from './BlogMenu.astro';
+import { posts, fdate } from '../lib/posts.js';
+const { n = 1 } = Astro.props;
+const SZ = 5, total = Math.max(1, Math.ceil(posts.length / SZ));
+const items = posts.slice((n - 1) * SZ, n * SZ);
+const feat = n == 1 ? items[0] : null, rest = feat ? items.slice(1) : items;
+const href = (i) => (i == 1 ? '/blog/' : `/blog/page/${i}/`);
+---
+<h2>Blog</h2>
+<BlogMenu />
+{!posts.length && <p class="sub">New posts are on the way.</p>}
+{feat && <a class="feat" href={`/blog/${feat.slug}/`}><Cover img={feat.image} i={0} /><div><small>{feat.category}</small><h3>{feat.title}</h3><span class="mt">{fdate(feat.date)} · {feat.mins} min read</span><span class="l">Read post →</span></div></a>}
+<Newsletter where="blog" />
+<AdSlot />
+<div class="grid">{rest.map((p) => <a class="g bc" href={`/blog/${p.slug}/`}><Cover img={p.image} i={posts.indexOf(p)} /><small>{p.category}</small><h3>{p.title}</h3><span class="mt">{fdate(p.date)} · {p.mins} min read</span></a>)}</div>
+{total > 1 && <div class="pgr">{n > 1 ? <a class="pb" href={href(n - 1)}>← Prev</a> : <span class="pb" style="opacity:.35">← Prev</span>}{Array.from({ length: total }, (_, i) => <a class={'pb' + (i + 1 == n ? ' on' : '')} href={href(i + 1)}>{i + 1}</a>)}{n < total ? <a class="pb" href={href(n + 1)}>Next →</a> : <span class="pb" style="opacity:.35">Next →</span>}</div>}
+<AdSlot />

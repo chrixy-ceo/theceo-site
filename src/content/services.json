@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "title": "Data analysis & statistics",
+      "text": "SPSS analysis, results tables and charts, with interpretation you can defend."
+    },
+    {
+      "title": "Research & thesis support",
+      "text": "Statistical audits, results chapters, document editing and defence preparation."
+    },
+    {
+      "title": "Automation & AI workflows",
+      "text": "n8n and Python workflows that replace repetitive work and run on their own."
+    },
+    {
+      "title": "Tools, sites & guides",
+      "text": "Interactive guides, dashboards and chatbots for health and pharmacy teams."
+    }
+  ]
+}

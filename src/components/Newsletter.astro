@@ -1,0 +1,14 @@
+---
+import site from '../content/site.json';
+const { where = 'blog' } = Astro.props;
+const info = where == 'info';
+const title = info ? site.newsletter_title_info : site.newsletter_title_blog;
+const text = info ? site.newsletter_text_info : site.newsletter_text_blog;
+const action = site.newsletter_form_action, link = site.newsletter_link;
+---
+{(action || link) && <div class="nl">
+<div class="nlc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3.5 7.5l8.5 6 8.5-6"/></svg></div>
+<div class="nlt"><h3>{title}</h3><p>{text}</p></div>
+{action ? <form class="nlf" action={action} method="post" target="_blank"><input type="email" name={site.newsletter_email_name || 'email'} placeholder="Your email address" required aria-label="Email address" /><button class="btn" type="submit">{site.newsletter_button}</button></form> : <a class="btn nlb" href={link} target="_blank" rel="noopener">{site.newsletter_button}</a>}
+<small class="nls">No spam. Unsubscribe any time. See the <a href="/privacy/">Privacy Policy</a>.</small>
+</div>}

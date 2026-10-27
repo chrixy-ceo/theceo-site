@@ -1,0 +1,64 @@
+{
+  "tools": [
+    {
+      "name": "SPSS",
+      "color": "#1F70C1"
+    },
+    {
+      "name": "Excel",
+      "color": "#217346"
+    },
+    {
+      "name": "Power BI",
+      "color": "#F2C811"
+    },
+    {
+      "name": "Python",
+      "color": "#3776AB"
+    },
+    {
+      "name": "R",
+      "color": "#276DC3"
+    },
+    {
+      "name": "SQL",
+      "color": "#4169E1"
+    },
+    {
+      "name": "pandas",
+      "color": "#E70488"
+    },
+    {
+      "name": "n8n",
+      "color": "#EA4B71"
+    },
+    {
+      "name": "Selenium",
+      "color": "#43B02A"
+    },
+    {
+      "name": "Docker",
+      "color": "#2496ED"
+    },
+    {
+      "name": "GitHub",
+      "color": ""
+    },
+    {
+      "name": "Netlify",
+      "color": "#00C7B7"
+    },
+    {
+      "name": "Astro",
+      "color": "#BC52EE"
+    },
+    {
+      "name": "Streamlit",
+      "color": "#FF4B4B"
+    },
+    {
+      "name": "JavaScript",
+      "color": "#F7DF1E"
+    }
+  ]
+}

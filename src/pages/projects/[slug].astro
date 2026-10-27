@@ -1,0 +1,16 @@
+---
+import Shell from '../../layouts/Shell.astro';
+export function getStaticPaths() { const m = import.meta.glob('../../content/projects/*.json', { eager: true }); return Object.entries(m).map(([f, x]) => ({ params: { slug: f.split('/').pop().replace('.json', '') }, props: { p: x.default } })); }
+const { p } = Astro.props;
+const CAT = { analysis: 'Analysis project', automation: 'Automation project', other: 'Project' };
+---
+<Shell title={p.title} desc={p.description} image={p.og_image || p.cover_image} type="article" ads={false}>
+<a class="bk" href="/#work">← Back to My work</a>
+{p.cover_image && <img class="pcv" src={p.cover_image} alt="" />}
+<article class="ar2" style="max-width:860px"><small>{CAT[p.category] || 'Project'}</small><h1>{p.title}</h1>{p.client_logo && <img class="pcl" src={p.client_logo} alt="" />}<p>{p.description}</p>
+{p.tools && p.tools.length > 0 && <div class="tg" style="margin-top:16px">{p.tools.map((t) => <span>{t}</span>)}</div>}
+{p.screenshots && p.screenshots.length > 0 && <div class="shots">{p.screenshots.map((u) => <a href={u} target="_blank" rel="noopener"><img src={u} alt="" /></a>)}</div>}
+{p.link && <div class="sh"><a class="btn p" href={p.link} target="_blank" rel="noopener">Visit project</a></div>}
+</article>
+<style is:global>.pcv{display:block;width:100%;aspect-ratio:21/8;object-fit:cover;border-radius:26px;margin-bottom:30px}.pcl{display:block;height:30px;width:auto;margin:6px 0 12px}.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:26px 0}.shots a{display:block}.shots img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:16px;border:1px solid var(--ln);margin:0}</style>
+</Shell>

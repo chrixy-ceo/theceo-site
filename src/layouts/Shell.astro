@@ -1,0 +1,37 @@
+---
+import '../styles/site.css';
+import s from '../content/settings.json';
+import site from '../content/site.json';
+import Meta from '../components/Meta.astro';
+const { title, desc = '', header = true, ads = true, active = '', image = '', type = 'website' } = Astro.props;
+const adsOn = ads && site.ads_enabled && site.adsense_client;
+---
+<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><Meta title={title} description={desc} image={image} type={type} />{site.adsense_client && <meta name="google-adsense-account" content={site.adsense_client} />}{adsOn && <script is:inline async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${site.adsense_client}`} crossorigin="anonymous"></script>}<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style is:global>.ar2 ul,.ar2 ol{margin:14px 0 14px 22px;color:var(--mu)}.ar2 img{max-width:100%;border-radius:16px;margin:18px 0}.ar2 a{color:var(--teal);text-decoration:underline}.ar2 h2{display:block;font-size:20px;margin:30px 0 8px}.ar2 h2::after{display:none}.ar2 h3{margin-top:26px}.ar2 strong{color:var(--tx)}.nlogo{height:26px;width:auto;margin-right:10px;border-radius:6px}
+.sh2{position:relative}.sh2 .sn .pl,.sh2 .sn .sep{display:none}#mb{display:none}
+@media(max-width:860px){
+header.sh2{flex-wrap:nowrap;gap:10px}header.sh2 .bn{margin-right:auto;min-width:0}
+#th2,#mb{width:40px;height:40px;min-height:0;padding:0;border-radius:50%;flex:none}
+#mb{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+#mb span{display:block;width:16px;height:2px;background:currentColor;border-radius:2px;transition:transform .2s,opacity .2s}
+.sh2.open #mb span:nth-child(1){transform:translateY(6px) rotate(45deg)}.sh2.open #mb span:nth-child(2){opacity:0}.sh2.open #mb span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.sh2 .sn{display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:30;order:0;width:auto;flex-direction:column;gap:0;padding:8px;border:1px solid var(--ln);border-radius:20px;background:color-mix(in srgb,var(--bg) 96%,transparent);box-shadow:var(--sh);font-size:16px}
+.sh2.open .sn{display:flex}
+.sh2 .sn a{display:block;padding:13px 16px;border-radius:12px;color:var(--tx)}.sh2 .sn a.on{background:var(--pn);box-shadow:none}
+.sh2 .sn .sep{display:block;height:1px;background:var(--ln);margin:6px 8px}
+.sh2 .sn .pl{display:block;color:var(--mu);font-size:15px;padding:11px 16px}
+.legal{gap:2px 8px}.legal a{padding:10px 8px}}
+</style></head>
+<body><div id="pg"></div><div id="blog"><section><div class="w">
+{header && <header class="sh2"><a class="bn" href="/">{s.logo && <img class="nlogo" src={s.logo} alt="" />}<span class="fn">{s.name}</span><span class="so" set:html={s.short_name.replace(/\./g,"<b>.</b>")}></span></a><div class="sn"><a href="/">Portfolio</a><a href="/blog/" class={active == 'blog' ? 'on' : ''}>Blog</a><a href="/infobytes/" class={active == 'info' ? 'on' : ''}>Infobytes</a><span class="sep"></span><a class="pl" href="/about/">About</a><a class="pl" href="/contact/">Contact</a><a class="pl" href="/privacy/">Privacy</a><a class="pl" href="/terms/">Terms</a><a class="pl" href="/disclaimer/">Disclaimer</a></div><button class="btn" id="th2" aria-label="Toggle light and dark theme">◐</button><button class="btn" id="mb" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button></header>}
+<slot />
+<div class="au"><img alt="" src={s.photo}><a class="btn p" href="/">View my portfolio</a></div>
+<p class="legal lgl"><a href="/about/">About</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="/disclaimer/">Disclaimer</a></p>
+</div></section></div><script is:inline>
+const R=document.documentElement;try{R.dataset.theme=localStorage.th||(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}catch(e){}
+document.addEventListener('click',e=>{if(e.target.closest('#th2')){R.dataset.theme=R.dataset.theme=='dark'?'light':'dark';try{localStorage.th=R.dataset.theme}catch(x){}}});
+document.querySelectorAll('[data-share]').forEach(a=>a.href='https://wa.me/?text='+encodeURIComponent(document.title+' '+location.href));
+document.querySelectorAll('[data-dl]').forEach(e=>{const d=Math.ceil((new Date(e.dataset.dl)-new Date())/864e5);e.textContent=d>0?d+' days left':'Closed'});
+addEventListener('scroll',()=>{const p=document.getElementById('pg');if(p&&document.querySelector('.ar2'))p.style.width=scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight)*100+'%'});
+</script><script is:inline>
+document.addEventListener('click',e=>{const h=document.querySelector('.sh2');if(!h)return;const b=e.target.closest('#mb');if(b){const o=h.classList.toggle('open');b.setAttribute('aria-expanded',o)}else if(!e.target.closest('.sn')){h.classList.remove('open');const m=document.getElementById('mb');if(m)m.setAttribute('aria-expanded','false')}});
+</script></body></html>

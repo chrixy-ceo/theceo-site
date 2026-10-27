@@ -1,0 +1,24 @@
+---
+import Shell from '../../../../layouts/Shell.astro';
+import Cover from '../../../../components/Cover.astro';
+import AdSlot from '../../../../components/AdSlot.astro';
+import Newsletter from '../../../../components/Newsletter.astro';
+import BlogMenu from '../../../../components/BlogMenu.astro';
+import site from '../../../../content/site.json';
+import { posts, cats, fdate, slugify } from '../../../../lib/posts.js';
+export function getStaticPaths({ paginate }) {
+  return cats.flatMap((c) => paginate(posts.filter((p) => slugify(p.category) === c.slug), { params: { cat: c.slug }, props: { cat: c }, pageSize: 6 }));
+}
+const { page, cat } = Astro.props;
+const base = `/blog/category/${cat.slug}/`;
+const href = (i) => (i == 1 ? base : `${base}${i}/`);
+---
+<Shell title={`${cat.name} | Blog`} desc={site.blog_description} image={site.blog_og_image} active="blog">
+<h2>{cat.name}</h2>
+<BlogMenu active={cat.slug} />
+<Newsletter where="blog" />
+<AdSlot />
+<div class="grid">{page.data.map((p) => <a class="g bc" href={`/blog/${p.slug}/`}><Cover img={p.image} i={posts.indexOf(p)} /><small>{p.category}</small><h3>{p.title}</h3><span class="mt">{fdate(p.date)} · {p.mins} min read</span></a>)}</div>
+{page.lastPage > 1 && <div class="pgr">{page.url.prev ? <a class="pb" href={href(page.currentPage - 1)}>← Prev</a> : <span class="pb" style="opacity:.35">← Prev</span>}{Array.from({ length: page.lastPage }, (_, i) => <a class={'pb' + (i + 1 == page.currentPage ? ' on' : '')} href={href(i + 1)}>{i + 1}</a>)}{page.url.next ? <a class="pb" href={href(page.currentPage + 1)}>Next →</a> : <span class="pb" style="opacity:.35">Next →</span>}</div>}
+<AdSlot />
+</Shell>

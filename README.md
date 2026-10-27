@@ -29,6 +29,10 @@ The same newsletter box appears on the Blog and on Infobytes (with different wor
 Optional: if your tool gives you a plain HTML form, paste the form's address into **form address** and its email field name into **email field name** to show an email box directly on the site. If the form needs extra hidden fields, use the sign-up page link instead.
 You can change the wording of both boxes in the same place.
 
+## Updating an existing site
+Upload the contents of this folder over your repository (drag everything inside the folder onto GitHub's Upload files page). Files with the same name are replaced, and new ones are added.
+`public/admin/config.yml` is deliberately left out of this folder, because it holds your own repository name and the sign-in settings. Your existing copy stays as it is. `config.example.yml` is the newest full version of that file: only copy it over `public/admin/config.yml` (and set the `repo:` line) if you want fields it contains that yours lacks, or when starting a new repository.
+
 ## The content editor
 Go to `https://theceo.dev/admin/` and sign in with GitHub. Sign-in is handled by `worker.js`. To switch it on:
 1. In `public/admin/config.yml` put your repository in the `repo:` line, for example `yourname/theceo-site`. If the project sits inside a folder in your repo, use `config-for-subfolder.yml` instead.

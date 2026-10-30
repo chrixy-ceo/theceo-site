@@ -7,6 +7,7 @@ deadline: 2026-12-01
 location: Global
 type: Fellowship
 image: /uploads/5.webp
+og_image: /uploads/5.webp
 apply_url: https://www.kinship.earth/nature-culture-fellowship
 description: Kinship’s Nature Culture Fellowship supports people who use
   storytelling, art and culture to drive social and environmental change. It

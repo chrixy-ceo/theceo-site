@@ -8,8 +8,9 @@ location: Open to researchers based at African universities and research
   institutions. Delivery format (in person or virtual) is not stated.
 type: Grant
 image: /uploads/codesria_appel_bourses_en_fr-1.png
+og_image: /uploads/codesria_appel_bourses_en_fr-1.png
 apply_url: https://apply.codesria.org/grants-subventions/
-description: >+
+description: >
   CODESRIA is funding research that looks at how universities in Africa are
   changing, with a focus on gender, academic freedom and the strength of student
   and staff associations on campus. Successful researchers get 15 months of

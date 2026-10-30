@@ -7,6 +7,7 @@ deadline: 2026-12-01
 location: Global
 type: Fellowship
 image: /uploads/5.webp
+apply_url: https://www.kinship.earth/nature-culture-fellowship
 description: Kinship’s Nature Culture Fellowship supports people who use
   storytelling, art and culture to drive social and environmental change. It
   runs from February to August 2027, includes a micro-grant of USD 1,000 to USD
@@ -16,17 +17,25 @@ description: Kinship’s Nature Culture Fellowship supports people who use
 
 The Nature Culture Fellowship is run by Kinship for people who believe that stories, art and culture can change how societies relate to nature and to one another. It aims to build a global movement of change-makers who work through culture.
 
-The fellowship runs in two stages between February and August 2027. First is a Learning Journey, starting on 5 February 2027, where fellows explore storytelling, art as activism, systems thinking and ways of building respectful relationships with the living world. Then comes a Project Implementation phase, where each fellow turns what they have learned into a project, supported by a micro-grant and mentorship.
-
-It is open to applicants from any country, and the application can be completed in English, Spanish, Portuguese or French. It suits community-rooted creatives, organisers and storytellers who want time, guidance and a little funding to make their ideas real.
+The fellowship runs in two stages between February and August 2027. First is a Learning Journey, starting on 5 February 2027, where fellows explore storytelling, art as activism, systems thinking and ways of building respectful relationships with the living world. Then comes a Project Implementation phase, where each fellow turns what they have learned into a project, supported by a micro-grant and mentorship. It is open to applicants from any country, and the application can be completed in English, Spanish, Portuguese or French. It suits community-rooted creatives, organisers and storytellers who want time, guidance and a little funding to make their ideas real.
 
 **Who can apply:**
 
-Individuals with real roots and influence in their communities. People who can commit 3 to 7 months to the programmeSelf-motivated applicants who are open to new perspectives and to unlearning old onesConnectors who want to break down systemic barriers and who value creativity, collaboration and storytellingApplicants who are focused on lasting projects and partnershipsApplicants from any country (the application is available in English, Spanish, Portuguese and French)
+* Individuals with real roots and influence in their communities. 
+* People who can commit 3 to 7 months to the programme
+* Self-motivated applicants who are open to new perspectives and to unlearning old ones
+* Connectors who want to break down systemic barriers and who value creativity, collaboration and storytelling
+* Applicants who are focused on lasting projects and partnerships
+* Applicants from any country (the application is available in English, Spanish, Portuguese and French)
 
 **What you get:**
 
-A micro-grant of USD 1,000 to USD 2,000 for your projectMentorship from professionalsA Learning Journey starting on 5 February 2027Opportunities to grow your work locally, regionally and globally
+* A micro-grant of USD 1,000 to USD 2,000 for your project
+* Mentorship from professionals
+* A Learning Journey starting on 5 February 2027
+* Opportunities to grow your work locally, regionally and globally
+
+
 
 **How to apply:**
 

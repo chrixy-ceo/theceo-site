@@ -5,17 +5,17 @@ category: Courses
 image: /uploads/images.jpg
 og_image: /uploads/images.jpg
 ---
-# 5 Free AI Courses Worth Your Time, From Complete Beginner to Builder
-
-#### Five free courses that take you from understanding AI at work to building and fine-tuning your own LLM applications.
-
-
+Five free courses that take you from understanding AI at work to building and fine-tuning your own LLM applications.
 
 *AI learning resources are everywhere, and the hard part is no longer finding something to study. It’s knowing where to start. Whether you work in a pharmacy, a marketing team or a data role, the right course depends on where you are now and what you want to build.*
 
 **I’ve listed five free courses, starting with the gentlest and moving towards the more technical. Each one has a “Best for” line, so you can skip straight to the one that fits.**
 
-#### **1. Introduction to AI for Work (DataCamp)**
+
+
+
+
+## **1. Introduction to AI for Work (DataCamp)**
 
 This is the easiest way in. It explains what AI, machine learning, generative AI and large language models (LLMs) are, then looks at how they’re used in everyday work. You don’t need a technical background.
 
@@ -23,9 +23,7 @@ This is the easiest way in. It explains what AI, machine learning, generative AI
 
 **Link:** [DataCamp, Introduction to AI for Work](https://www.datacamp.com/courses/introduction-to-ai-for-work)
 
-
-
-#### **2. Easy-Vibe: AI Coding Guide from Scratch**
+## **2. Easy-Vibe: AI Coding Guide from Scratch**
 
 This guide is project-based and teaches you to build apps with AI tools. It covers vibe coding, frontend, backend, databases and deployment, and it also introduces AI agents and AI coding tools.
 
@@ -33,9 +31,7 @@ This guide is project-based and teaches you to build apps with AI tools. It cove
 
 **Link:** [Easy-Vibe (English version)](https://datawhalechina.github.io/easy-vibe/en/)
 
-
-
-#### **3. LLM Course (Maxime Labonne)**
+## **3. LLM Course (Maxime Labonne)**
 
 This is a free roadmap for learning large language models. It runs from the fundamentals through fine-tuning, quantization, evaluation and deployment, and into LLM engineering. It gives you a clear path rather than scattered tutorials.
 
@@ -43,9 +39,7 @@ This is a free roadmap for learning large language models. It runs from the fund
 
 **Link:** [LLM Course on GitHub](https://github.com/mlabonne/llm-course)
 
-
-
-#### **4. LLM Zoomcamp (DataTalks.Club)**
+## **4. LLM Zoomcamp (DataTalks.Club)**
 
 This course is built around real-world LLM applications. You work through retrieval-augmented generation (RAG), vector search, embeddings, AI agents, function calling, evaluation, monitoring and reranking.
 
@@ -53,15 +47,15 @@ This course is built around real-world LLM applications. You work through retrie
 
 **Link:** [LLM Zoomcamp on GitHub](https://github.com/DataTalksClub/llm-zoomcamp)
 
-
-
-#### **5. Hugging Face LLM Course**
+## **5. Hugging Face LLM Course**
 
 This course teaches LLMs and natural language processing using the Hugging Face ecosystem. You learn about Transformers, Datasets and Tokenizers, then move on to fine-tuning, sharing your models and more advanced LLM concepts.
 
 **Best for:** AI developers and anyone interested in open-source LLMs
 
 **Link:** [Hugging Face LLM Course](https://huggingface.co/learn/llm-course/chapter1/1)
+
+
 
 
 

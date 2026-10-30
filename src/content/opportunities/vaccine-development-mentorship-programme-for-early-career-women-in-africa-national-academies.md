@@ -9,6 +9,7 @@ location: Hybrid. Africa-based cohort, with a two-day in-person workshop
   (location not stated) and virtual sessions after that.
 type: Programme
 image: /uploads/nas-vaccinology-banner-7.jpg
+og_image: /uploads/nas-vaccinology-banner-7.jpg
 apply_url: https://vaccinementorship.nationalacademies.org/
 description: A one-year mentorship programme from the National Academies for
   early-career women working in vaccine development in Africa. It combines

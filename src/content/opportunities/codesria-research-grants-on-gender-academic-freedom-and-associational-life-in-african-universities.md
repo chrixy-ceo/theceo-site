@@ -7,7 +7,7 @@ location: Open to researchers based at African universities and research
   institutions. Delivery format (in person or virtual) is not stated.
 type: Grant
 image: /uploads/codesria_appel_bourses_en_fr-1.png
-og_image: https://d22dvihj4pfop3.cloudfront.net/wp-content/uploads/sites/144/2026/10/15055405/JDM01299-1024x683.jpg
+og_image: ""
 apply_url: https://apply.codesria.org/grants-subventions/
 description: >
   CODESRIA is funding research that looks at how universities in Africa are

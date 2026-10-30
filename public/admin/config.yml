@@ -451,6 +451,7 @@ collections:
           - Scholarships
           - Jobs
           - Fellowships
+          - Grants
           - Other
       - label: Organisation
         name: organization

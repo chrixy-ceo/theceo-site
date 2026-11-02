@@ -2,7 +2,7 @@
 title: AI Video Creator
 category: Jobs
 organization: BuzzyBooth.com
-deadline: 2026-11-13
+deadline: 2026-11-02
 location: Remote
 type: Full Time
 image: https://workablehr.s3.amazonaws.com/uploads/account/logo/352642/logo

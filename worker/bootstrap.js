@@ -10,10 +10,15 @@ const SCHEMA = [
 ];
 
 let ready = null;
+const KEY_READY = 'db:ready:v1';
 
 export function ensureDatabase(env) {
   if (!env.DB) return Promise.resolve();
-  if (!ready) ready = setup(env).catch((e) => { ready = null; console.error('Database setup failed:', e?.message || e); });
+  if (!ready) ready = (async () => {
+    if (env.NEWS && (await env.NEWS.get(KEY_READY, { cacheTtl: 3600 }))) return;
+    await setup(env);
+    if (env.NEWS) await env.NEWS.put(KEY_READY, '1');
+  })().catch((e) => { ready = null; console.error('Database setup failed:', e?.message || e); });
   return ready;
 }
 
@@ -28,4 +33,5 @@ async function setup(env) {
   const insert = env.DB.prepare("INSERT OR IGNORE INTO content (path, body, version, updated_at, updated_by) VALUES (?, ?, 1, ?, 'seed')");
   for (let i = 0; i < seed.length; i += 50) await env.DB.batch(seed.slice(i, i + 50).map(([path, body]) => insert.bind(path, body, now)));
   console.log(`Database initialised with ${seed.length} items.`);
+  if (env.NEWS) await env.NEWS.put('content:ver', String(Date.now()));
 }

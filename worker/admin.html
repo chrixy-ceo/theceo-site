@@ -80,7 +80,7 @@ const COLLECTIONS = {
 const SECTIONS = [
   { id: 'home', label: 'Home', icon: '⌂', tabs: [['dashboard', 'Overview']] },
   { id: 'blog', label: 'Blog', icon: '✎', tabs: [['c/posts', 'Posts'], ['drafts', 'Drafts']] },
-  { id: 'info', label: 'Infobytes', icon: '◎', tabs: [['c/opportunities', 'Opportunities']] },
+  { id: 'info', label: 'Infobytes', icon: '◎', tabs: [['c/opportunities', 'Opportunities'], ['odrafts', 'Drafts']] },
   { id: 'site', label: 'Website', icon: '▤', tabs: [['s/settings.json', 'Profile'], ['s/about.json', 'About'], ['c/projects', 'Projects'], ['s/services.json', 'Services'], ['s/stack.json', 'Tools'], ['c/certifications', 'Certifications'], ['c/pages', 'Pages'], ['s/site.json', 'Blog & ads settings']] },
   { id: 'media', label: 'Media', icon: '▣', tabs: [['media', 'Images & files']] },
   { id: 'auto', label: 'Auto-posting', icon: '↻', tabs: [['news', 'Auto-posting']] },
@@ -220,7 +220,7 @@ function renderLogin(msg) {
 function shell() {
   $('#root').innerHTML = `<div id="app"><nav id="nav"><h1>The<span>CEO</span> Admin</h1>
     <button class="srch" id="sbtn"><span>Search…</span><kbd>Ctrl K</kbd></button>
-    <div class="mainnav">${SECTIONS.filter(x => !x.hidden).map(x => `<a href="#${x.tabs[0][0]}" data-sec="${x.id}"><i>${x.icon}</i><span>${x.label}</span>${x.id === 'blog' ? '<span class="badge" id="nb" hidden></span>' : ''}</a>`).join('')}</div>
+    <div class="mainnav">${SECTIONS.filter(x => !x.hidden).map(x => `<a href="#${x.tabs[0][0]}" data-sec="${x.id}"><i>${x.icon}</i><span>${x.label}</span>${x.id === 'blog' ? '<span class="badge" id="nb" hidden></span>' : x.id === 'info' ? '<span class="badge" id="nbo" hidden></span>' : ''}</a>`).join('')}</div>
     <div class="acct"><a href="#account" data-sec="acct"><span>Account & password</span></a><a href="#activity"><span>Activity log</span></a><a href="/" target="_blank"><span>View website ↗</span></a><a href="#" id="lo"><span>Sign out</span></a></div></nav>
     <div id="scrim"></div><main><div class="crumb" id="crumb"></div><div class="top"><button class="btn" id="mbtn" aria-label="Menu">☰</button><h2 id="title"></h2><div id="actions" style="display:flex;gap:8px;flex-wrap:wrap"></div></div><div class="subnav" id="subnav"></div><div id="view"></div></main></div>`;
   $('#lo').onclick = async e => { e.preventDefault(); await api('logout', { method: 'POST' }).catch(() => {}); renderLogin('Signed out.'); };
@@ -229,7 +229,7 @@ function shell() {
   refreshDraftBadge();
 }
 function setHead(title, actions = '', crumb = '') { $('#title').textContent = title; $('#actions').innerHTML = actions; $('#crumb').innerHTML = crumb; document.title = title + ' · Admin'; }
-async function refreshDraftBadge() { try { const n = (await loadItems('posts')).filter(i => isDraft(i.d)).length; document.querySelectorAll('#nb,[data-dc]').forEach(b => { b.textContent = n; b.hidden = !n; }); return n; } catch { return 0; } }
+async function refreshDraftBadge() { try { const n = (await loadItems('posts')).filter(i => isDraft(i.d)).length, m = (await loadItems('opportunities')).filter(i => isDraft(i.d)).length; document.querySelectorAll('#nb,[data-dc]').forEach(b => { b.textContent = n; b.hidden = !n; }); document.querySelectorAll('#nbo,[data-odc]').forEach(b => { b.textContent = m; b.hidden = !m; }); return n + m; } catch { return 0; } }
 function saveBar(onSave, extra = '') {
   saveFn = onSave;
   const bar = document.createElement('div'); bar.className = 'savebar';
@@ -244,14 +244,15 @@ async function route() {
   const sec = sectionOf(h);
   document.querySelectorAll('nav a[data-sec]').forEach(a => a.classList.toggle('on', a.dataset.sec === sec.id));
   const sn = $('#subnav'); sn.hidden = sec.tabs.length < 2;
-  sn.innerHTML = sec.tabs.map(([t, l]) => `<a href="#${t}" class="${h === t || h.startsWith(t + '/') ? 'on' : ''}">${l}${t === 'drafts' ? '<span class="badge" data-dc hidden></span>' : ''}</a>`).join('');
+  sn.innerHTML = sec.tabs.map(([t, l]) => `<a href="#${t}" class="${h === t || h.startsWith(t + '/') ? 'on' : ''}">${l}${t === 'drafts' ? '<span class="badge" data-dc hidden></span>' : t === 'odrafts' ? '<span class="badge" data-odc hidden></span>' : ''}</a>`).join('');
   refreshDraftBadge();
   $('#nav')?.classList.remove('open');
   $('#view').innerHTML = '<p class="mu">Loading…</p>'; scrollTo(0, 0);
   const [a, b, c] = h.split('/');
   try {
     if (a === 'dashboard') return await viewDashboard();
-    if (a === 'drafts') return await viewDrafts();
+    if (a === 'drafts') return await viewDrafts('posts');
+    if (a === 'odrafts') return await viewDrafts('opportunities');
     if (a === 'c' && c) return await viewEditor(b, decodeURIComponent(c));
     if (a === 'c') return await viewList(b);
     if (a === 's') return await viewSettings(b);
@@ -345,21 +346,22 @@ async function viewAccount() {
 }
 
 /* ---------- Drafts review ---------- */
-async function viewDrafts() {
-  setHead('Drafts to review', '');
-  const items = (await loadItems('posts', true)).filter(i => isDraft(i.d)).sort((a, b) => String(b.d.date).localeCompare(String(a.d.date)));
+async function viewDrafts(kind = 'posts') {
+  const ck = kind;
+  setHead(kind === 'opportunities' ? 'Opportunity drafts' : 'Blog drafts');
+  const items = (await loadItems(kind, true)).filter(i => isDraft(i.d)).sort((a, b) => String(b.f.updated || b.d.date).localeCompare(String(a.f.updated || a.d.date)));
   if (!items.length) { $('#view').innerHTML = '<div class="card empty"><b style="color:var(--tx)">All caught up.</b><br>New auto-posts will appear here for you to review.</div>'; return; }
   $('#view').innerHTML = `<p class="sub">Read each draft, then publish it or delete it. Drafts are not visible on your site.</p>` + items.map((it, i) => `<div class="card" id="d${i}">
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start"><div><span class="pill">${esc(it.d.category || '')}</span> ${it.f.by === 'autopost' ? '<span class="pill ac">Auto</span>' : ''}<h3 style="font-size:17px;margin-top:8px">${esc(titleOf(it))}</h3><p class="mu" style="margin:4px 0 0">${esc(it.d.description || '')}</p></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-x="read">Read</button><a class="btn sm" href="#c/posts/${encodeURIComponent(it.f.name)}">Edit</a><button class="btn sm d" data-x="del">Delete</button><button class="btn sm p" data-x="pub">Publish</button></div></div>
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start"><div><span class="pill">${esc(it.d.category || '')}</span> ${it.f.by === 'autopost' ? '<span class="pill ac">Auto</span>' : ''}<h3 style="font-size:17px;margin-top:8px">${esc(titleOf(it))}</h3><p class="mu" style="margin:4px 0 0">${esc(ck === 'opportunities' ? [it.d.organization, it.d.location, it.d.deadline ? 'Deadline ' + fd(it.d.deadline) : 'No deadline'].filter(Boolean).join(' · ') : it.d.description || '')}</p>${ck === 'opportunities' && it.d.apply_url ? `<p style="margin:6px 0 0;font-size:13px">Apply link: <a href="${esc(it.d.apply_url)}" target="_blank" rel="noopener">${esc(it.d.apply_url.slice(0, 70))}</a></p>` : ''}${it.d.source_url ? `<p style="margin:2px 0 0;font-size:13px" class="mu">Source: <a href="${esc(it.d.source_url)}" target="_blank" rel="noopener">${esc(it.d.source || it.d.source_url.slice(0, 60))}</a></p>` : ''}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-x="read">Read</button><a class="btn sm" href="#c/${ck}/${encodeURIComponent(it.f.name)}">Edit</a><button class="btn sm d" data-x="del">Delete</button><button class="btn sm p" data-x="pub">Publish</button></div></div>
       <div class="pv" style="display:none;margin-top:12px;max-height:none">${md(it.body)}</div></div>`).join('');
   items.forEach((it, i) => {
     const card = $('#d' + i);
     card.querySelector('[data-x=read]').onclick = e => { const p = card.querySelector('.pv'); const on = p.style.display === 'none'; p.style.display = on ? 'block' : 'none'; e.target.textContent = on ? 'Hide' : 'Read'; };
     card.querySelector('[data-x=pub]').onclick = e => busy(e.currentTarget, async () => {
       const content = it.f.content.replace(/^draft:\s*(true|"true"|'true')\s*$/m, 'draft: false');
-      await api('file', { method: 'PUT', body: { path: it.f.path, sha: it.f.sha, content } }); toast('Published. It is live on your blog now.'); card.remove(); refreshDraftBadge();
-      if (!document.querySelector('#view .card')) viewDrafts();
+      await api('file', { method: 'PUT', body: { path: it.f.path, sha: it.f.sha, content } }); toast(ck === 'opportunities' ? 'Published. It is live on Infobytes now.' : 'Published. It is live on your blog now.'); card.remove(); refreshDraftBadge();
+      if (!document.querySelector('#view .card')) viewDrafts(ck);
     });
     card.querySelector('[data-x=del]').onclick = e => { if (confirm('Delete this draft?')) busy(e.currentTarget, async () => { await api('file', { method: 'DELETE', body: { path: it.f.path, sha: it.f.sha } }); toast('Draft deleted.'); card.remove(); refreshDraftBadge(); }); };
   });
@@ -571,7 +573,7 @@ async function viewNews() {
   const writerErr = lastSkips.find(x => /writer failed|Workers AI/i.test(x.skipped));
   const aiState = writerErr ? ['er', 'Needs attention', 'The AI writer failed on the last run. Click “Test AI writer”.']
     : made.length ? ['ok', 'Working', `Last post written ${ago(made[0].at)}.`]
-    : last ? ['mu', 'Waiting for a good story', 'The writer only posts when a fresh, relevant, high-priority story comes in.'] : ['mu', 'Not run yet', 'Click “Run now” to try it.'];
+    : last ? ['mu', 'Waiting for a good story', 'The writer only posts real, open opportunities it can verify on the source page.'] : ['mu', 'Not run yet', 'Click “Run now” to try it.'];
   const nextRun = (() => { const d = new Date(); d.setMinutes(60, 0, 0); return Math.max(1, Math.round((d - Date.now()) / 60000)); })();
   const dot = c => `<i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--${c === 'mu' ? 'ln' : c});margin-right:8px"></i>`;
   const reason = t => String(t).replace(/^.*?: (already covered|off-topic|too close to source|too similar to an existing post|writer failed)/, '$1').replace(/^already covered.*/, 'Already covered').replace(/^off-topic/, 'Off-topic').replace(/^too close to source.*/, 'Too close to the source').replace(/^too similar.*/, 'Too similar to an existing post').replace(/^no fresh high-priority story/, 'No big story this hour').replace(/^daily limit reached/, 'Daily limit reached');
@@ -581,14 +583,15 @@ async function viewNews() {
       <div class="card stat"><span>Hourly job</span><b style="font-size:18px;margin-top:4px">${dot(cfg.enabled ? 'ok' : 'mu')}${cfg.enabled ? 'On' : 'Paused'}</b><span style="font-size:12.5px">${cfg.enabled ? `Next run in about ${nextRun} min` : 'Turn it on in settings below'}</span></div>
       <div class="card stat"><span>Posts written</span><b style="margin-top:4px">${made.length}</b><span style="font-size:12.5px">${cfg.autopost.publish ? 'Published automatically' : 'Saved as drafts for you to review'}</span></div>
     </div>
-    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Latest posts written</h3>${made.length ? '<a href="#drafts">Review drafts →</a>' : ''}</div>
-      ${made.length ? `<table class="resp">${made.slice(0, 8).map(x => `<tr class="row" onclick="location.hash='c/posts/${encodeURIComponent(x.created.split('/').pop())}'"><td><b>${esc(x.title)}</b></td><td><span class="pill">${esc(x.category)}</span></td><td class="mu">${ago(x.at)}</td></tr>`).join('')}</table>` : '<p class="mu" style="margin:6px 0 0">No posts yet. They appear here as soon as the writer finds a good story.</p>'}
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Latest posts written</h3>${made.length ? `<a href="#${(cfg.autopost.target || 'infobytes') === 'blog' ? 'drafts' : 'odrafts'}">Review drafts →</a>` : ''}</div>
+      ${made.length ? `<table class="resp">${made.slice(0, 8).map(x => `<tr class="row" onclick="location.hash='c/${x.created.includes('/opportunities/') ? 'opportunities' : 'posts'}/${encodeURIComponent(x.created.split('/').pop())}'"><td><b>${esc(x.title)}</b></td><td><span class="pill">${esc(x.category)}</span></td><td class="mu">${ago(x.at)}</td></tr>`).join('')}</table>` : '<p class="mu" style="margin:6px 0 0">No posts yet. They appear here as soon as the writer finds a good story.</p>'}
     </div>
-    <div class="card"><h3>Stories found this hour</h3><p class="mu" style="margin:0 0 10px;font-size:13px">From Google News and Bing News, for each of your blog categories.</p>
+    <div class="card"><h3>Stories found this hour</h3><p class="mu" style="margin:0 0 10px;font-size:13px">From Google News and Bing News, for each category the writer posts to.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">${s.categories.map(c => `<span class="pill" style="padding:6px 12px;font-size:13px" title="${c.failures ? 'Could not fetch stories: ' + esc(c.error) : c.error ? 'One source was busy, the other covered it.' : 'Both sources OK'}">${dot(c.failures ? 'er' : 'ok')}${esc(c.name)} · ${c.count}</span>`).join('') || '<span class="mu">Nothing yet. Click “Run now”.</span>'}</div>
       ${lastSkips.length ? `<details class="sect" style="margin:14px 0 0"><summary class="mu">Why some stories were skipped last run (${lastSkips.length})</summary><ul class="mu" style="margin:8px 0 0;padding-left:18px;font-size:13px">${lastSkips.map(x => `<li>${esc(x.category || '')}: ${esc(reason(x.skipped))}</li>`).join('')}</ul></details>` : ''}
     </div>
     <div class="card" id="nc"><h3>Settings</h3><div class="row2">
+      <div><label>Post to</label><select id="a_tg"><option value="infobytes" ${(cfg.autopost.target || 'infobytes') === 'infobytes' ? 'selected' : ''}>Infobytes (opportunities)</option><option value="blog" ${cfg.autopost.target === 'blog' ? 'selected' : ''}>Blog (articles)</option><option value="both" ${cfg.autopost.target === 'both' ? 'selected' : ''}>Both</option></select></div>
       <div><label>Auto-posting</label><select id="a_on"><option value="true" ${cfg.autopost.enabled ? 'selected' : ''}>On: write posts every hour</option><option value="false" ${!cfg.autopost.enabled ? 'selected' : ''}>Off</option></select></div>
       <div><label>New posts are</label><select id="a_pub"><option value="false" ${!cfg.autopost.publish ? 'selected' : ''}>Saved as drafts (I review first)</option><option value="true" ${cfg.autopost.publish ? 'selected' : ''}>Published straight away</option></select></div>
       <div><label>Most posts per category per day</label><input id="a_max" type="number" min="0" max="24" value="${cfg.autopost.perCategoryPerDay}"></div>
@@ -611,7 +614,7 @@ async function viewNews() {
   $('#tai').onclick = e => busy(e.currentTarget, async () => { const r = await api('news/test-ai', { method: 'POST' }); if (r.ok) toast(`AI writer is working (answered in ${(r.ms / 1000).toFixed(1)}s).`); else toast('AI writer problem: ' + r.error, true); });
   $('#nsave').onclick = e => busy(e.target, async () => {
     const queries = {}; $('#n_q').value.split('\n').forEach(l => { const i = l.indexOf('='); if (i > 0) queries[l.slice(0, i).trim()] = l.slice(i + 1).trim(); });
-    await api('news/config', { method: 'PUT', body: { enabled: $('#n_enabled').value === 'true', autopost: { enabled: $('#a_on').value === 'true', publish: $('#a_pub').value === 'true', perCategoryPerDay: +$('#a_max').value, minScore: +$('#a_min').value }, sources: $('#n_src').value.split(','), window: $('#n_window').value.trim(), perCategory: +$('#n_per').value, maxAgeDays: +$('#n_age').value, hl: $('#n_hl').value.trim(), gl: $('#n_gl').value.trim(), ceid: $('#n_ceid').value.trim(), extra: $('#n_extra').value, disabled: $('#n_dis').value, queries } });
+    await api('news/config', { method: 'PUT', body: { enabled: $('#n_enabled').value === 'true', autopost: { target: $('#a_tg').value, enabled: $('#a_on').value === 'true', publish: $('#a_pub').value === 'true', perCategoryPerDay: +$('#a_max').value, minScore: +$('#a_min').value }, sources: $('#n_src').value.split(','), window: $('#n_window').value.trim(), perCategory: +$('#n_per').value, maxAgeDays: +$('#n_age').value, hl: $('#n_hl').value.trim(), gl: $('#n_gl').value.trim(), ceid: $('#n_ceid').value.trim(), extra: $('#n_extra').value, disabled: $('#n_dis').value, queries } });
     toast('Saved. Applies from the next run.');
   });
 }

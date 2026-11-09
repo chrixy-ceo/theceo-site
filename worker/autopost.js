@@ -1,88 +1,164 @@
-// Turns the highest-priority fresh story in each blog category into a blog post that
-// follows the site's post template. Writing is done by Cloudflare Workers AI; if that fails,
-// a plain template post is used instead. Every story is used at most once.
+// Turns the highest-priority fresh story in each blog category into an original blog post that
+// follows the site's post template. Everything runs on Cloudflare Workers AI:
+//   1. Meaning-based de-duplication: each story gets an embedding ("meaning fingerprint") and is
+//      skipped if it is about the same thing as anything posted in the last 30 days.
+//   2. Varied writing: the post format rotates (explainer, list, how-to, quick take, Q&A) and the
+//      writer is shown the blog's own human-written posts as style examples.
+//   3. Originality check: drafts that reuse the source's phrasing, or read too much like an
+//      existing post, are rewritten once and dropped if still too close.
+// Every story is considered at most once. Posts are drafts unless auto-publish is switched on.
 import { writeFile } from './db.js';
 
 const KEY_USED = 'autopost:used';
-const MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const KEY_FP = 'autopost:fingerprints';
+const KEY_FMT = 'autopost:formats';
+const WRITER = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const EMBED = '@cf/baai/bge-base-en-v1.5';
+const SAME_STORY = 0.86;    // story vs. past posts: at or above = same story, skip
+const SAME_POST = 0.93;     // draft vs. past posts: at or above = reads like a duplicate
+const MAX_COPIED = 0.2;     // share of the source's 5-word phrases allowed in the draft
+const FP_DAYS = 30;
+
+const FORMATS = {
+  explainer: 'An explainer. Short intro paragraph, then an italic line on why it matters, then 2-3 "## " sections that explain what happened, what it means and what to do next.',
+  list: 'A "things to know" list post. One-paragraph intro, then a numbered list of 4-6 key points, each with a bold lead-in and 1-2 sentences, then a short "## The bottom line" section.',
+  howto: 'A practical how-to angle. Intro that frames the opportunity or problem, then "## " steps or tips readers can act on this week, grounded in the story, then a one-line closing tip in italics.',
+  take: 'A quick take / opinion-style piece in first person plural ("we"). Hook paragraph, then "## What we think" and "## Who should pay attention" sections. Keep claims tied to the facts given.',
+  qa: 'A Q&A. Intro paragraph, then 4-5 "### " questions a curious reader would ask, each answered in 2-3 sentences using only the facts given.',
+};
+
 const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
 const key = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 90);
+const yaml = (v) => JSON.stringify(String(v ?? ''));
+const fmOf = (body) => { const fm = (body.match(/^---\r?\n([\s\S]*?)\r?\n---/) || [])[1] || ''; const f = {}; for (const m of fm.matchAll(/^([A-Za-z0-9_]+):\s?(.*)$/gm)) f[m[1]] = m[2].trim().replace(/^["']|["']$/g, ''); return f; };
+const bodyOf = (md) => md.replace(/^---[\s\S]*?---\r?\n?/, '');
+const plain = (t) => String(t || '').replace(/[#>*_`~\[\]()!]+/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/\s+/g, ' ').trim();
+
+function cosine(a, b) {
+  let d = 0, x = 0, y = 0;
+  for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; }
+  return d / (Math.sqrt(x * y) || 1);
+}
+
+async function embed(env, texts) {
+  const r = await env.AI.run(EMBED, { text: texts.map((t) => plain(t).slice(0, 2000)) });
+  return r.data;
+}
+
+// Share of the source's 5-word phrases that appear word-for-word in the draft.
+function copiedShare(source, draft) {
+  const grams = (t) => { const w = plain(t).toLowerCase().split(' ').filter(Boolean); const g = new Set(); for (let i = 0; i + 5 <= w.length; i++) g.add(w.slice(i, i + 5).join(' ')); return g; };
+  const s = grams(source), d = grams(draft);
+  if (!s.size) return 0;
+  let hit = 0; for (const g of s) if (d.has(g)) hit++;
+  return hit / s.size;
+}
 
 // Blog categories = the categories of the posts in D1 right now.
 export async function blogCategories(env) {
   if (!env.DB) return [];
   const { results } = await env.DB.prepare("SELECT body FROM content WHERE path LIKE 'src/content/posts/%.md'").all();
-  const cats = results.map((r) => (r.body.match(/^category:\s*["']?([^"'\n]+)["']?\s*$/m) || [])[1]).filter(Boolean).map((s) => s.trim());
-  return [...new Set(cats)];
+  return [...new Set(results.map((r) => fmOf(r.body).category).filter(Boolean))];
 }
 
-// The newest post in the category (or any post) gives the field names and default images.
-async function templateFor(env, category) {
-  const { results } = await env.DB.prepare("SELECT body FROM content WHERE path LIKE 'src/content/posts/%.md' ORDER BY updated_at DESC").all();
-  const parsed = results.map((r) => {
-    const fm = (r.body.match(/^---\r?\n([\s\S]*?)\r?\n---/) || [])[1] || '';
-    const f = {}; for (const m of fm.matchAll(/^([A-Za-z0-9_]+):\s?(.*)$/gm)) f[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
-    return f;
-  });
-  return parsed.find((f) => f.category === category) || parsed[0] || {};
+async function allPosts(env) {
+  const { results } = await env.DB.prepare("SELECT path, body, updated_by, updated_at FROM content WHERE path LIKE 'src/content/posts/%.md' ORDER BY updated_at DESC").all();
+  return results.map((r) => ({ ...r, fm: fmOf(r.body), text: bodyOf(r.body) }));
 }
 
-const yaml = (v) => JSON.stringify(String(v ?? ''));
+// Fingerprints of recent posts, kept in KV. Built from existing posts on first use.
+async function loadFingerprints(env, posts) {
+  const cutoff = Date.now() - FP_DAYS * 864e5;
+  let fps = ((await env.NEWS.get(KEY_FP, 'json')) || []).filter((f) => f.at >= cutoff);
+  const known = new Set(fps.map((f) => f.path));
+  const missing = posts.filter((p) => !known.has(p.path)).slice(0, 40);
+  if (missing.length) {
+    const vecs = await embed(env, missing.map((p) => `${p.fm.title}. ${p.fm.description || ''} ${p.text.slice(0, 1200)}`));
+    missing.forEach((p, i) => fps.push({ path: p.path, at: Date.now(), v: vecs[i].map((x) => Math.round(x * 1e4) / 1e4) }));
+  }
+  return fps;
+}
 
-async function write(env, story, category) {
-  const prompt = `Write a blog post for a Nigerian-focused tech, AI and careers blog, in category "${category}".
-Base it ONLY on this news item. Do not invent facts, figures, quotes or dates not given here.
+async function write(env, { story, category, format, examples, retryNote }) {
+  const prompt = `You write for a Nigerian-focused blog about AI, automation, tech skills and careers. Category: "${category}".
+Here is how the blog's own posts read (match this voice, not the structure):
+${examples || '(no examples)'}
+
+News item (the ONLY facts you may use; never invent figures, quotes, names or dates):
 Headline: ${story.title}
 Publisher: ${story.source}
 Published: ${story.published}
 Summary: ${story.summary || '(none provided)'}
 
-First decide: is this story genuinely useful to readers interested in "${category}" (AI, automation, tech skills, careers)? If not (e.g. sports, gossip, unrelated meanings of the word), return {"skip": true}.
-Otherwise return JSON only: {"title": "...", "description": "one sentence under 160 characters", "body": "markdown"}.
-Body: 300-500 words. Open with one short intro paragraph, then an italic line on why it matters to readers, then 2-3 "## " sections (what happened, what it means, what to do next). Plain, friendly British English. No hype. Do not include the title in the body.`;
-  const res = await env.AI.run(MODEL, { messages: [{ role: 'user', content: prompt }], max_tokens: 1400, temperature: 0.4 });
-  const text = String(res?.response ?? '');
-  const json = JSON.parse((text.match(/\{[\s\S]*\}/) || [])[0]);
+First decide: is this genuinely useful to readers interested in "${category}"? If not (sports, gossip, celebrity, unrelated meanings of the word), return {"skip": true}.
+Otherwise write an ORIGINAL post in your own words. Do not reuse sentences or phrases from the headline or summary. Give it a fresh, specific title (not the source headline).
+Format: ${FORMATS[format]}
+Length: 350-550 words. Plain, warm British English. No hype, no clichés like "in today's fast-paced world". Do not repeat the title in the body. End by telling readers what to watch for or do next.${retryNote ? '\n\nIMPORTANT: ' + retryNote : ''}
+Return JSON only: {"title": "...", "description": "one sentence under 160 characters", "body": "markdown"}`;
+  const res = await env.AI.run(WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 1600, temperature: 0.7 });
+  const json = JSON.parse((String(res?.response ?? '').match(/\{[\s\S]*\}/) || [])[0]);
   if (json?.skip) return { skip: true };
-  if (!json?.title || !json?.body || json.body.length < 400) throw new Error('AI output too short');
+  if (!json?.title || !json?.body || json.body.length < 600) throw new Error('AI output too short');
   return json;
-}
-
-function fallback(story, category) {
-  return {
-    title: story.title,
-    description: (story.summary || story.title).slice(0, 158),
-    body: `${story.summary || story.title}\n\n*Here is a quick look at a story in ${category} that is worth knowing about.*\n\n## What happened\n\n${story.source} reported: **${story.title}**.\n\n## Read more\n\nThe full report is on ${story.source}.`,
-  };
 }
 
 export async function autoPost(env, cfg, categories) {
   const out = [];
   if (!cfg.autopost?.enabled || !env.DB) return out;
-  const blogCats = new Set(await blogCategories(env));
+  if (!env.AI) return [{ skipped: 'Workers AI is not connected, so no posts were written' }];
+
+  const posts = await allPosts(env);
+  const blogCats = new Set(posts.map((p) => p.fm.category).filter(Boolean));
   const used = new Set((await env.NEWS.get(KEY_USED, 'json')) || []);
-  // Posts made in the last 24h per category, so we never flood a category.
-  const since = new Date(Date.now() - 864e5).toISOString();
-  const { results: recent } = await env.DB.prepare("SELECT body FROM content WHERE path LIKE 'src/content/posts/%.md' AND updated_by = 'autopost' AND updated_at >= ?").bind(since).all();
+  const lastFormats = (await env.NEWS.get(KEY_FMT, 'json')) || {};
+  const fps = await loadFingerprints(env, posts);
+  const since = Date.now() - 864e5;
+  // Style examples: the newest human-written posts (never auto-posts, to avoid drifting).
+  const examples = posts.filter((p) => p.updated_by !== 'autopost' && p.text.length > 400).slice(0, 2).map((p, i) => `Example ${i + 1}: "${p.fm.title}"\n${p.text.slice(0, 700)}…`).join('\n\n');
 
   for (const c of Object.values(categories)) {
     if (!blogCats.has(c.name)) continue;
-    const today = recent.filter((r) => r.body.includes(`category: ${c.name}`)).length;
+    const today = posts.filter((p) => p.updated_by === 'autopost' && p.fm.category === c.name && new Date(p.updated_at).getTime() >= since).length;
     if (today >= cfg.autopost.perCategoryPerDay) { out.push({ category: c.name, skipped: 'daily limit reached' }); continue; }
-    // Try the top candidates in priority order; the AI rejects off-topic ones (max 4 tries per category).
-    let story, post, ai = true;
-    for (const cand of c.items.filter((i) => !used.has(key(i.title)) && i.score >= cfg.autopost.minScore).slice(0, 4)) {
-      used.add(key(cand.title));
-      try {
-        if (!env.AI) throw new Error('no AI binding');
-        const r = await write(env, cand, c.name);
-        if (r.skip) continue;
-        story = cand; post = r; ai = true; break;
-      } catch { story = cand; post = fallback(cand, c.name); ai = false; break; }
-    }
-    if (!story) { out.push({ category: c.name, skipped: 'no relevant high-priority story yet' }); continue; }
 
-    const tpl = await templateFor(env, c.name);
+    const candidates = c.items.filter((i) => !used.has(key(i.title)) && i.score >= cfg.autopost.minScore).slice(0, 5);
+    if (!candidates.length) { out.push({ category: c.name, skipped: 'no fresh high-priority story' }); continue; }
+
+    // 1. Drop stories we have effectively covered already (same meaning, any wording).
+    const vecs = await embed(env, candidates.map((s) => `${s.title}. ${s.summary || ''}`));
+    const fresh = [];
+    candidates.forEach((s, i) => {
+      used.add(key(s.title));
+      const best = fps.reduce((m, f) => Math.max(m, cosine(vecs[i], f.v)), 0);
+      if (best >= SAME_STORY) out.push({ category: c.name, skipped: 'already covered: ' + s.title, similarity: +best.toFixed(3) });
+      else fresh.push({ s, v: vecs[i] });
+    });
+
+    // 2 + 3. Write in a rotating format, then check originality.
+    const order = Object.keys(FORMATS);
+    const format = order[(order.indexOf(lastFormats[c.name]) + 1) % order.length];
+    let made = null;
+    for (const { s: story, v: storyVec } of fresh.slice(0, 3)) {
+      let note = '', post = null, why = '';
+      for (let attempt = 0; attempt < 2 && !post; attempt++) {
+        let draft;
+        try { draft = await write(env, { story, category: c.name, format, examples, retryNote: note }); } catch (e) { why = 'writer failed: ' + e.message; break; }
+        if (draft.skip) { why = 'off-topic'; break; }
+        const copied = copiedShare(`${story.title} ${story.summary || ''}`, draft.body + ' ' + draft.title);
+        const [dv] = await embed(env, [`${draft.title}. ${draft.description} ${draft.body.slice(0, 1200)}`]);
+        const closest = fps.reduce((m, f) => Math.max(m, cosine(dv, f.v)), 0);
+        if (copied > MAX_COPIED) { note = 'Your last draft reused the source wording. Rewrite every sentence in your own words.'; why = `too close to source (${Math.round(copied * 100)}% phrases reused)`; continue; }
+        if (closest >= SAME_POST) { note = 'Your last draft read too much like an existing post on this blog. Take a clearly different angle and structure.'; why = `too similar to an existing post (${closest.toFixed(2)})`; continue; }
+        post = { ...draft, copied, closest, vec: dv };
+      }
+      if (!post) { out.push({ category: c.name, skipped: `${story.title}: ${why}` }); continue; }
+      made = { story, post, storyVec };
+      break;
+    }
+    if (!made) continue;
+
+    const { story, post } = made;
+    const tpl = posts.find((p) => p.fm.category === c.name)?.fm || posts[0]?.fm || {};
     const image = story.image || tpl.image || '';
     const fm = {
       title: post.title, date: new Date().toISOString(), category: c.name,
@@ -91,14 +167,22 @@ export async function autoPost(env, cfg, categories) {
       source: story.source, source_url: story.link,
       draft: cfg.autopost.publish ? 'false' : 'true',
     };
-    const body = `${post.body.trim()}\n\n---\n\n*Source: [${story.source}](${story.link})*\n`;
+    const body = `${post.body.trim()}\n\n---\n\n*Based on reporting by [${story.source}](${story.link}).*\n`;
     const md = '---\n' + Object.entries(fm).map(([k, v]) => `${k}: ${k === 'draft' ? v : yaml(v)}`).join('\n') + '\n---\n' + body;
     const slug = slugify(post.title) || 'post-' + Date.now();
     let path = `src/content/posts/${slug}.md`;
     try { await writeFile(env, { path, content: md }, 'autopost'); }
     catch { path = `src/content/posts/${slug}-${Date.now().toString(36)}.md`; await writeFile(env, { path, content: md }, 'autopost'); }
-    out.push({ category: c.name, created: path, title: post.title, ai, score: story.score });
+
+    fps.push({ path, at: Date.now(), v: post.vec.map((x) => Math.round(x * 1e4) / 1e4) });
+    lastFormats[c.name] = format;
+    out.push({ category: c.name, created: path, title: post.title, ai: true, format, score: story.score, copied: +post.copied.toFixed(2), closest: +post.closest.toFixed(2) });
   }
-  await env.NEWS.put(KEY_USED, JSON.stringify([...used].slice(-3000)));
+
+  await Promise.all([
+    env.NEWS.put(KEY_USED, JSON.stringify([...used].slice(-3000))),
+    env.NEWS.put(KEY_FP, JSON.stringify(fps.slice(-400))),
+    env.NEWS.put(KEY_FMT, JSON.stringify(lastFormats)),
+  ]);
   return out;
 }

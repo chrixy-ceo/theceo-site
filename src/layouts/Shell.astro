@@ -1,7 +1,7 @@
 ---
 import '../styles/site.css';
-import s from '../content/settings.json';
-import site from '../content/site.json';
+import { settings as s } from '../lib/content.js';
+import { site } from '../lib/content.js';
 import Meta from '../components/Meta.astro';
 const { title, desc = '', header = true, ads = true, active = '', image = '', type = 'website' } = Astro.props;
 const adsOn = ads && site.ads_enabled && site.adsense_client;

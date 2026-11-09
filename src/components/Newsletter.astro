@@ -1,5 +1,5 @@
 ---
-import site from '../content/site.json';
+import { site } from '../lib/content.js';
 const { where = 'blog' } = Astro.props;
 const info = where == 'info';
 const title = info ? site.newsletter_title_info : site.newsletter_title_blog;

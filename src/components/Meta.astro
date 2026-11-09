@@ -1,7 +1,6 @@
 ---
-import s from '../content/settings.json';
-import site from '../content/site.json';
-import fs from 'node:fs';
+import { settings as s } from '../lib/content.js';
+import { site } from '../lib/content.js';
 const { title, description = '', image = '', path = Astro.url.pathname, type = 'website' } = Astro.props;
 const ORIGIN = 'https://theceo.dev';
 const abs = (u) => (u ? (/^https?:\/\//.test(u) ? u : ORIGIN + (u.startsWith('/') ? u : '/' + u)) : '');
@@ -9,7 +8,7 @@ const img = abs(image || s.default_og_image || '/uploads/og-default.png');
 const url = ORIGIN + path;
 const desc = description || s.seo_description;
 // Infobytes and Blog pages can share their own tab icon: set in the editor, or just upload public/uploads/infobytes-favicon.png
-const own = fs.existsSync('public/uploads/infobytes-favicon.png') ? '/uploads/infobytes-favicon.png' : '';
+const own = '/uploads/infobytes-favicon.png';
 const icon = ((path.startsWith('/infobytes') || path.startsWith('/blog')) && (site.infobytes_favicon || own)) || s.favicon || '/uploads/favicon.png';
 ---
 <title>{title}</title><meta name="description" content={desc} /><link rel="canonical" href={url} /><link rel="icon" href={icon} />

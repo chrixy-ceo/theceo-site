@@ -1,6 +1,6 @@
 // Serves the site, the /administrator CMS (content in D1, media in R2) and the hourly auto-post cron.
-// Also keeps the old Decap editor's GitHub sign-in (/api/auth and /api/callback).
 import adminHtml from './worker/admin.html';
+import astro from './dist/_worker.js/index.js';
 import { login, readSession, clearSession, sameOrigin, authConfigured } from './worker/auth.js';
 import { listDir, readFile, writeFile, deleteFile, recentCommits, serveMedia, HttpError } from './worker/db.js';
 import { runNews, newsStatus, getConfig, saveConfig } from './worker/news.js';
@@ -21,11 +21,10 @@ export default {
     const url = new URL(request.url);
     const p = url.pathname;
     try {
-      if (p === '/api/auth') return startSignIn(url, env);
-      if (p === '/api/callback') return finishSignIn(request, url, env);
       if (p.startsWith('/uploads/')) { const r = await serveMedia(env, decodeURIComponent(p.slice(9))); if (r) return r; }
       if (p === '/administrator' || p.startsWith('/administrator/')) return await admin(request, env, ctx, url);
-      return env.ASSETS.fetch(request);
+      if (p.startsWith('/uploads/')) return env.ASSETS.fetch(request);
+      return astro.fetch(request, env, ctx); // public site, rendered live from D1
     } catch (e) {
       const status = e instanceof HttpError ? e.status : 500;
       if (status === 500) console.error(e?.stack || e);
@@ -73,34 +72,4 @@ async function admin(request, env, ctx, url) {
     case 'POST news/run': return json(await runNews(env, { trigger: 'manual:' + session.u, force: true }));
   }
   return json({ error: 'Not found.' }, 404);
-}
-
-function startSignIn(url, env) {
-  if (!env.GITHUB_CLIENT_ID) return new Response('Editor sign-in is not set up yet.', { status: 500 });
-  const state = crypto.randomUUID();
-  const gh = new URL('https://github.com/login/oauth/authorize');
-  gh.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
-  gh.searchParams.set('redirect_uri', url.origin + '/api/callback');
-  gh.searchParams.set('scope', 'repo,user');
-  gh.searchParams.set('state', state);
-  return new Response(null, { status: 302, headers: { Location: gh.toString(), 'Set-Cookie': `oauth_state=${state}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=600` } });
-}
-
-async function finishSignIn(request, url, env) {
-  const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
-  const saved = ((request.headers.get('Cookie') || '').match(/oauth_state=([^;]+)/) || [])[1];
-  if (!code || !state || state !== saved) return new Response('Sign-in failed. Please close this window and try again.', { status: 400 });
-  const r = await fetch('https://github.com/login/oauth/access_token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ client_id: env.GITHUB_CLIENT_ID, client_secret: env.GITHUB_CLIENT_SECRET, code }),
-  });
-  const data = await r.json();
-  const msg = data.access_token
-    ? 'authorization:github:success:' + JSON.stringify({ token: data.access_token, provider: 'github' })
-    : 'authorization:github:error:' + JSON.stringify({ error: data.error || 'unknown' });
-  const safe = JSON.stringify(msg).replace(/</g, '\\u003c');
-  const html = `<!doctype html><meta charset="utf-8"><p>Signing you in…</p><script>(function(){function r(e){window.opener.postMessage(${safe},e.origin);window.removeEventListener('message',r,false);}window.addEventListener('message',r,false);window.opener.postMessage('authorizing:github','*');})();</script>`;
-  return new Response(html, { headers: { 'Content-Type': 'text/html;charset=UTF-8', 'Set-Cookie': 'oauth_state=; Max-Age=0; Path=/; Secure' } });
 }

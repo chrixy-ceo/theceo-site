@@ -2,11 +2,13 @@
 import Shell from '../../layouts/Shell.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import Newsletter from '../../components/Newsletter.astro';
-import site from '../../content/site.json';
-import { ops } from '../../lib/ops.js';
-import { posts } from '../../lib/posts.js';
+import { site } from '../../lib/content.js';
+import { getOps } from '../../lib/ops.js';
+const ops = getOps();
+import { getPosts } from '../../lib/posts.js';
+const posts = getPosts();
 const HASBLOG = posts.length > 0;
-const OPS = ops.map(({ Content, ...o }) => o);
+const OPS = ops.map(({ body, ...o }) => o);
 const LOGO = site.infobytes_logo || '';
 ---
 <Shell title={site.infobytes_title} desc={site.infobytes_description} image={site.infobytes_og_image} header={false} active="info">

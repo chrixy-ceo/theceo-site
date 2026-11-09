@@ -110,7 +110,7 @@ const HINTS = {
   whatsapp: 'Country code and number, no + or spaces. Example: 2348012345678', short_name: 'Shown on small screens, e.g. C.E.O.', headline: 'The big line under your photo.',
   seo_title: 'Shown in Google results and browser tabs.', seo_description: 'One or two sentences shown under the title in Google.', og_image: 'Shown when the link is shared on WhatsApp, X, LinkedIn…',
   default_og_image: 'Used when a page has no share image of its own.', adsense_client: 'Starts with ca-pub-', category: 'Pick an existing category or type a new one.',
-  description: 'Shown in lists and in Google. Keep it under 160 characters.', deadline: 'Opportunities past their deadline show as Closed.',
+  description: 'Shown in lists and in Google. Keep it under 160 characters.', deadline: 'Leave empty (or click No deadline) if there is none: it stays Open and is listed first. Past deadlines show as Closed.',
 };
 // Settings fields are grouped into sections by these rules (first match wins).
 const GROUPS = [
@@ -196,6 +196,7 @@ function statusPill(it, key) {
   if (key === 'posts' || key === 'opportunities') {
     if (isDraft(it.d)) return `<span class="pill wa">Draft</span>${it.f.by === 'autopost' ? ' <span class="pill ac">Auto</span>' : ''}`;
     if (key === 'opportunities' && it.d.deadline && new Date(it.d.deadline) < new Date(today())) return '<span class="pill er">Closed</span>';
+    if (key === 'opportunities' && !it.d.deadline) return '<span class="pill ok">Open</span> <span class="pill">No deadline</span>';
     return `<span class="pill ok">Live</span>${it.f.by === 'autopost' ? ' <span class="pill ac">Auto</span>' : ''}`;
   }
   return '';
@@ -356,7 +357,8 @@ function fieldInput(k, v, opts = {}) {
   const id = 'f_' + k;
   if (opts.list) return `<input id="${id}" data-k="${k}" value="${esc(v)}" list="dl_${k}"><datalist id="dl_${k}">${opts.list.map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   if (IMG_KEY.test(k) || /pdf|^cv$/.test(k)) return `<div class="imgf">${v && IMG_KEY.test(k) ? `<img src="${esc(v)}" alt="">` : ''}<input id="${id}" data-k="${k}" value="${esc(v)}" placeholder="/uploads/…"><button class="btn" type="button" data-up="${id}">Upload</button></div>`;
-  if (/date|deadline/i.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v || '2000-01-01'))) return `<input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}">`;
+  if (k === 'deadline') return `<div class="imgf"><input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}"><button class="btn" type="button" data-nodl="${id}">No deadline</button></div>`;
+  if (/date/i.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v || '2000-01-01'))) return `<input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}">`;
   if (typeof v === 'boolean' || /^(true|false)$/i.test(String(v))) return `<select id="${id}" data-k="${k}" data-bool="${typeof v === 'boolean' ? 'native' : 'str'}"><option value="true" ${String(v).toLowerCase() === 'true' ? 'selected' : ''}>Yes</option><option value="false" ${String(v).toLowerCase() !== 'true' ? 'selected' : ''}>No</option></select>`;
   if (Array.isArray(v)) return listEditor(k, v);
   if (v !== null && typeof v === 'object') return `<textarea class="code" id="${id}" data-k="${k}" data-json="1" rows="8">${esc(JSON.stringify(v, null, 2))}</textarea>`;
@@ -406,6 +408,7 @@ function readFields(scope) {
 }
 function wireUploads(scope) {
   scope.querySelectorAll('[data-up]').forEach(b => b.onclick = () => pickUpload(url => { const i = $('#' + b.dataset.up); i.value = url; i.dispatchEvent(new Event('input', { bubbles: true })); const img = i.previousElementSibling; if (img?.tagName === 'IMG') img.src = url; else if (IMG_KEY.test(i.dataset.k)) i.insertAdjacentHTML('beforebegin', `<img src="${esc(url)}" alt="">`); }));
+  scope.querySelectorAll('[data-nodl]').forEach(b => b.onclick = () => { const i = $('#' + b.dataset.nodl); i.value = ''; setDirty(true); });
   scope.addEventListener('input', () => setDirty(true));
 }
 

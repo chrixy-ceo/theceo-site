@@ -186,3 +186,19 @@ export async function autoPost(env, cfg, categories) {
   ]);
   return out;
 }
+
+// Quick health check for the AI writer and the duplicate checker (used by the admin's Test button).
+export async function testAI(env) {
+  if (!env.AI) return { ok: false, error: 'Workers AI is not connected to this Worker.' };
+  const t = Date.now();
+  try {
+    const r = await env.AI.run(WRITER, { messages: [{ role: 'user', content: 'Reply with exactly: ready' }], max_tokens: 10 });
+    const e = await env.AI.run(EMBED, { text: ['test'] });
+    const reply = String(r?.response || '').trim();
+    if (!reply) throw new Error('The writer returned an empty reply.');
+    if (!e?.data?.[0]?.length) throw new Error('The duplicate checker returned no data.');
+    return { ok: true, ms: Date.now() - t, reply: reply.slice(0, 40) };
+  } catch (err) {
+    return { ok: false, ms: Date.now() - t, error: String(err?.message || err) };
+  }
+}

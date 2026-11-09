@@ -4,6 +4,7 @@ import astro from './dist/_worker.js/index.js';
 import { login, readSession, clearSession, sameOrigin, authConfigured } from './worker/auth.js';
 import { listDir, listItems, readFile, writeFile, deleteFile, recentCommits, serveMedia, HttpError } from './worker/db.js';
 import { ensureDatabase } from './worker/bootstrap.js';
+import { testAI } from './worker/autopost.js';
 import { runNews, newsStatus, getConfig, saveConfig } from './worker/news.js';
 
 const SEC_HEADERS = {
@@ -72,6 +73,7 @@ async function admin(request, env, ctx, url) {
     case 'GET news/status': return json(await newsStatus(env));
     case 'GET news/config': return json(await getConfig(env));
     case 'PUT news/config': return json(await saveConfig(env, body));
+    case 'POST news/test-ai': return json(await testAI(env));
     case 'POST news/run': return json(await runNews(env, { trigger: 'manual:' + session.u, force: true }));
   }
   return json({ error: 'Not found.' }, 404);

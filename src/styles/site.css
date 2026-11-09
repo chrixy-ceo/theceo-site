@@ -268,3 +268,24 @@ footer .legal{justify-content:flex-end}.lgl{margin:26px 0 6px}.adw{margin:22px 0
 .nw{display:inline-block;margin-left:6px;padding:2px 9px;border-radius:99px;background:var(--teal);color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:2px}
 .rb{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:860px){.nl{grid-template-columns:1fr;padding:22px 20px;gap:12px}.nlf{flex-direction:column}.nlf input{min-width:0;width:100%}.nl .btn{width:100%}.nlt h3{font-size:19px}.rb{width:100%}.rb .btn{flex:1}}
+
+/* ---- Infobytes polish ---- */
+/* Theme toggle icon centred */
+#th,#th2,.tgl{display:inline-grid;place-items:center}
+/* Logos are shown whole on a light tile (never cropped); photos keep filling the frame */
+.th.lgo{object-fit:contain;background:#fff;padding:10px}
+.hi .th.lgo{padding:28px 40px;max-height:260px}
+/* Deadline urgency: red = 3 days or less, amber = this fortnight, teal = later, grey = closed */
+.dd.u{color:#e5604d;background:rgba(229,96,77,.14)}
+.dd.s{color:#d99a2b;background:rgba(217,154,43,.14)}
+.dd.o{color:var(--teal);background:color-mix(in srgb,var(--teal) 14%,transparent)}
+.dd.x{color:var(--mu);background:color-mix(in srgb,var(--mu) 12%,transparent)}
+.dd.n{color:var(--teal);background:color-mix(in srgb,var(--teal) 14%,transparent)}
+.it.cl{opacity:.6}.it.cl:hover{opacity:1}
+/* Readable NEW badge and real buttons in the reminder box */
+.rem .rt .nw{color:#04201d;font-size:11px;opacity:1}
+.ar2 .rem a.btn{text-decoration:none}
+/* Organisation logo beside the name: readable size on a light chip */
+.olg{margin-right:10px!important;height:28px!important;width:auto;max-width:120px;object-fit:contain;background:#fff;padding:3px 6px;border-radius:8px!important}
+/* Phones: category chips in one swipeable row instead of four rows */
+@media(max-width:860px){.ctl .fl{flex-wrap:nowrap;overflow-x:auto;margin:0 -5vw;padding:2px 5vw 6px;scrollbar-width:none}.ctl .fl::-webkit-scrollbar{display:none}.ctl .fl button,.ctl .fl a{flex:none}}

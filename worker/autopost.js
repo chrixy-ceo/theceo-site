@@ -8,6 +8,7 @@
 //      existing post, are rewritten once and dropped if still too close.
 // Every story is considered at most once. Posts are drafts unless auto-publish is switched on.
 import { writeFile } from './db.js';
+import { autoOpportunities } from './infobytes.js';
 
 const KEY_USED = 'autopost:used';
 const KEY_FP = 'autopost:fingerprints';
@@ -102,9 +103,18 @@ Return JSON only: {"title": "...", "description": "one sentence under 160 charac
   return json;
 }
 
+// Dispatcher: Infobytes opportunities, blog articles, or both (admin setting).
 export async function autoPost(env, cfg, categories) {
+  if (!cfg.autopost?.enabled || !env.DB) return [];
+  const target = cfg.autopost.target || 'infobytes';
   const out = [];
-  if (!cfg.autopost?.enabled || !env.DB) return out;
+  if (target !== 'blog') out.push(...await autoOpportunities(env, cfg, categories));
+  if (target !== 'infobytes') out.push(...await autoBlog(env, cfg, categories));
+  return out;
+}
+
+async function autoBlog(env, cfg, categories) {
+  const out = [];
   if (!env.AI) return [{ skipped: 'Workers AI is not connected, so no posts were written' }];
 
   const posts = await allPosts(env);

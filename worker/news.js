@@ -1,4 +1,5 @@
 import { autoPost, blogCategories } from './autopost.js';
+import { opportunityCategories } from './infobytes.js';
 
 // Hourly news collector (Google News + Bing News), ranked by priority. One run = every category, fetched in parallel with
 // timeouts, retries and backoff. A failing category keeps its last good items, so the
@@ -14,22 +15,23 @@ export const DEFAULT_CONFIG = {
   hl: 'en-NG', gl: 'NG', ceid: 'NG:en', // Google News edition
   window: '1d',          // only stories from the last N (h/d)
   perCategory: 20,       // items kept per category
-  maxAgeDays: 7,         // older items are dropped
+  maxAgeDays: 14,        // older items are dropped (opportunities stay open for weeks)
   // Search terms per category (editable in the admin). Categories not listed use their own name.
   queries: {
     AI: 'artificial intelligence',
     Automation: 'automation AI workflow',
     Courses: 'free online course certificate',
-    Grants: 'grant applications open Africa',
-    Jobs: 'jobs hiring Nigeria',
-    Scholarships: 'scholarship Nigerian students',
-    Fellowships: 'fellowship programme Africa applications',
-    Tech: 'technology Africa startups',
+    // Infobytes: phrased to find open calls for applications, not general news.
+    Scholarships: 'scholarship applications open Nigerian students deadline',
+    Jobs: 'now hiring Nigeria apply job vacancy',
+    Grants: 'call for applications grant Africa deadline',
+    Fellowships: 'fellowship call for applications Africa deadline',
+    Tech: 'free tech training programme applications open Nigeria',
   },
   extra: [],             // extra categories to track besides the site's own
   disabled: ['Other'],   // category names to skip
-  // Hourly auto-posting: turns the top fresh story per blog category into a post.
-  autopost: { enabled: true, publish: false, perCategoryPerDay: 2, minScore: 45 },
+  // Hourly auto-posting. target: 'infobytes' (opportunities), 'blog' (articles) or 'both'.
+  autopost: { enabled: true, publish: false, perCategoryPerDay: 2, minScore: 40, target: 'infobytes' },
 };
 
 const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -37,7 +39,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function getConfig(env) {
   const saved = env.NEWS ? await env.NEWS.get(KEY_CONFIG, 'json') : null;
-  return { ...DEFAULT_CONFIG, ...(saved || {}), autopost: { ...DEFAULT_CONFIG.autopost, ...(saved?.autopost || {}) } };
+  const OLD = { Grants: 'grant applications open Africa', Jobs: 'jobs hiring Nigeria', Scholarships: 'scholarship Nigerian students', Fellowships: 'fellowship programme Africa applications', Tech: 'technology Africa startups' };
+  const queries = { ...DEFAULT_CONFIG.queries };
+  for (const [k, v] of Object.entries(saved?.queries || {})) if (v && OLD[k] !== v) queries[k] = v;
+  return { ...DEFAULT_CONFIG, ...(saved || {}), queries, autopost: { ...DEFAULT_CONFIG.autopost, ...(saved?.autopost || {}) } };
 }
 
 export async function saveConfig(env, cfg) {
@@ -45,7 +50,7 @@ export async function saveConfig(env, cfg) {
   for (const k of Object.keys(DEFAULT_CONFIG)) if (cfg[k] !== undefined) clean[k] = cfg[k];
   clean.sources = (Array.isArray(clean.sources) ? clean.sources : []).filter((x) => ['google', 'bing'].includes(x)); if (!clean.sources.length) clean.sources = ['google', 'bing'];
   const ap = { ...DEFAULT_CONFIG.autopost, ...(cfg.autopost || {}) };
-  clean.autopost = { enabled: Boolean(ap.enabled), publish: Boolean(ap.publish), perCategoryPerDay: Math.min(24, Math.max(0, Number(ap.perCategoryPerDay) || 0)), minScore: Math.min(100, Math.max(0, Number(ap.minScore) || 0)) };
+  clean.autopost = { target: ['infobytes', 'blog', 'both'].includes(ap.target) ? ap.target : 'infobytes', enabled: Boolean(ap.enabled), publish: Boolean(ap.publish), perCategoryPerDay: Math.min(24, Math.max(0, Number(ap.perCategoryPerDay) || 0)), minScore: Math.min(100, Math.max(0, Number(ap.minScore) || 0)) };
   clean.perCategory = Math.min(50, Math.max(1, Number(clean.perCategory) || 20));
   clean.maxAgeDays = Math.min(60, Math.max(1, Number(clean.maxAgeDays) || 7));
   clean.extra = (Array.isArray(clean.extra) ? clean.extra : String(clean.extra).split(',')).map((s) => String(s).trim()).filter(Boolean);
@@ -182,11 +187,13 @@ export async function runNews(env, { trigger = 'cron', force = false } = {}) {
   const lock = await env.NEWS.get(KEY_LOCK);
   if (lock && !force) return { ok: true, skipped: 'another run in progress' };
   const runId = crypto.randomUUID();
-  await env.NEWS.put(KEY_LOCK, runId, { expirationTtl: 300 });
+  await env.NEWS.put(KEY_LOCK, runId, { expirationTtl: 900 }); // reading pages and writing can take a few minutes
 
   const started = Date.now();
   try {
-    const names = [...new Set([...(await blogCategories(env)), ...cfg.extra])].filter((c) => !cfg.disabled.includes(c));
+    const target = cfg.autopost?.target || 'infobytes';
+    const own = [...(target !== 'blog' ? await opportunityCategories(env) : []), ...(target !== 'infobytes' ? await blogCategories(env) : [])];
+    const names = [...new Set([...own, ...cfg.extra])].filter((c) => !cfg.disabled.includes(c));
     const prev = (await env.NEWS.get(KEY_DATA, 'json')) || { categories: {} };
     const results = await pool(names, 4, (name) => collect(name, cfg, prev.categories[slugify(name)]?.items));
 

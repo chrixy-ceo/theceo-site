@@ -10,6 +10,15 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*"]
-  }
+    "run_worker_first": ["/api/*", "/administrator", "/administrator/*", "/uploads/*"]
+  },
+  // Content database. Wrangler creates it on first deploy if it does not exist yet.
+  "d1_databases": [{ "binding": "DB", "database_name": "theceo-content", "migrations_dir": "migrations" }],
+  // Uploaded images and files.
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "theceo-media" }],
+  // News headlines, run log, login lockouts.
+  "kv_namespaces": [{ "binding": "NEWS" }],
+  // Collect Google News every hour, on the hour.
+  "triggers": { "crons": ["0 * * * *"] },
+  "observability": { "enabled": true }
 }

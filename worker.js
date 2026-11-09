@@ -3,6 +3,7 @@ import adminHtml from './worker/admin.html';
 import astro from './dist/_worker.js/index.js';
 import { login, readSession, clearSession, sameOrigin, authConfigured } from './worker/auth.js';
 import { listDir, listItems, readFile, writeFile, deleteFile, recentCommits, serveMedia, HttpError } from './worker/db.js';
+import { ensureDatabase } from './worker/bootstrap.js';
 import { runNews, newsStatus, getConfig, saveConfig } from './worker/news.js';
 
 const SEC_HEADERS = {
@@ -21,6 +22,7 @@ export default {
     const url = new URL(request.url);
     const p = url.pathname;
     try {
+      await ensureDatabase(env);
       if (p.startsWith('/uploads/')) { const r = await serveMedia(env, decodeURIComponent(p.slice(9))); if (r) return r; }
       if (p === '/administrator' || p.startsWith('/administrator/')) return await admin(request, env, ctx, url);
       if (p.startsWith('/uploads/')) return env.ASSETS.fetch(request);
@@ -33,7 +35,7 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runNews(env, { trigger: 'cron' }));
+    ctx.waitUntil(ensureDatabase(env).then(() => runNews(env, { trigger: 'cron' })));
   },
 };
 
@@ -54,7 +56,7 @@ async function admin(request, env, ctx, url) {
   if (route === 'logout') return json({ ok: true }, 200, { 'Set-Cookie': clearSession() });
 
   const session = await readSession(request, env);
-  if (route === 'me') return json({ user: session?.u || null, configured: authConfigured(env), db: Boolean(env.DB), media: Boolean(env.MEDIA), kv: Boolean(env.NEWS) });
+  if (route === 'me') return json({ user: session?.u || null, configured: authConfigured(env), db: Boolean(env.DB), media: Boolean(env.MEDIA || env.FILES), kv: Boolean(env.NEWS) });
   if (!session) return json({ error: 'Please sign in.' }, 401);
 
   let body = {};

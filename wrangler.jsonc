@@ -13,10 +13,10 @@
   },
   // Content database. Wrangler creates it on first deploy if it does not exist yet.
   "d1_databases": [{ "binding": "DB", "database_name": "theceo-content", "migrations_dir": "migrations" }],
-  // Uploaded images and files.
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "theceo-media" }],
+  // Uploaded images and files live in KV (FILES). To use R2 instead, enable R2, create a bucket
+  // and add: "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "<your bucket>" }]
   // Story cache, run log, used-story list, login lockouts.
-  "kv_namespaces": [{ "binding": "NEWS" }],
+  "kv_namespaces": [{ "binding": "NEWS" }, { "binding": "FILES" }],
   // Workers AI writes the hourly auto-posts.
   "ai": { "binding": "AI" },
   // Hourly: collect stories (Google + Bing News) and auto-post the top one per blog category.

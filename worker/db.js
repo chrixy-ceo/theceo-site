@@ -1,7 +1,8 @@
 // Content store on Cloudflare D1 (SQL). Every item is a row keyed by its path, e.g.
 // "src/content/posts/my-post.md", so the admin keeps the same shape as before.
 // Versions give optimistic locking (no silent overwrites). Every change is written to `activity`.
-// Media files go to R2 (binding MEDIA) and are served at /uploads/*.
+// Media files go to R2 (binding MEDIA) when it is set up, otherwise to Workers KV (binding FILES,
+// created automatically on deploy). Either way they are served at /uploads/*.
 import { HttpError } from './errors.js';
 export { HttpError };
 
@@ -16,6 +17,11 @@ export function safePath(p) {
 const isMedia = (p) => p.startsWith('public/uploads/');
 const mediaKey = (p) => p.slice('public/uploads/'.length);
 
+function files(env) {
+  if (!env.FILES) throw new HttpError(503, 'File storage (binding FILES) is not connected.');
+  return env.FILES;
+}
+
 function db(env) {
   if (!env.DB) throw new HttpError(503, 'The D1 database (binding DB) is not connected.');
   return env.DB;
@@ -26,12 +32,17 @@ async function log(env, action, path, user) {
 }
 
 export async function listDir(env, dir) {
-  const d = safePath(dir).replace(/\/$/, '');
+  const raw = String(dir || '').replace(/^\/+|\/+$/g, '');
+  const d = raw === 'public/uploads' ? raw : safePath(raw);
   if (isMedia(d + '/')) {
-    if (!env.MEDIA) throw new HttpError(503, 'The R2 bucket (binding MEDIA) is not connected.');
     const out = []; let cursor;
-    do { const r = await env.MEDIA.list({ cursor, limit: 1000 }); cursor = r.truncated ? r.cursor : null; out.push(...r.objects); } while (cursor);
-    return out.map((o) => ({ name: o.key, path: 'public/uploads/' + o.key, sha: o.etag, size: o.size, type: 'file' }));
+    if (env.MEDIA) {
+      do { const r = await env.MEDIA.list({ cursor, limit: 1000 }); cursor = r.truncated ? r.cursor : null; out.push(...r.objects.map((o) => ({ key: o.key, size: o.size, sha: o.etag }))); } while (cursor);
+    } else {
+      const kv = files(env);
+      do { const r = await kv.list({ cursor, limit: 1000 }); cursor = r.list_complete ? null : r.cursor; out.push(...r.keys.map((k) => ({ key: k.name, size: k.metadata?.size || 0, sha: 'kv' }))); } while (cursor);
+    }
+    return out.map((o) => ({ name: o.key, path: 'public/uploads/' + o.key, sha: o.sha, size: o.size, type: 'file' }));
   }
   const { results } = await db(env).prepare("SELECT path, version, length(body) AS size FROM content WHERE path LIKE ? AND path NOT LIKE ? ORDER BY path").bind(d + '/%', d + '/%/%').all();
   return results.map((r) => ({ name: r.path.split('/').pop(), path: r.path, sha: String(r.version), size: r.size, type: 'file' }));
@@ -54,15 +65,15 @@ export async function readFile(env, path) {
 export async function writeFile(env, { path, content, sha, base64 }, user) {
   const p = safePath(path);
   if (isMedia(p)) {
-    if (!env.MEDIA) throw new HttpError(503, 'The R2 bucket (binding MEDIA) is not connected.');
     const bytes = Uint8Array.from(atob(base64 || ''), (c) => c.charCodeAt(0));
     if (bytes.length > 8 * 1024 * 1024) throw new HttpError(413, 'Max file size is 8 MB.');
     const ext = p.split('.').pop().toLowerCase();
     const types = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif', pdf: 'application/pdf' };
     if (!types[ext]) throw new HttpError(400, 'Only images and PDFs can be uploaded.');
-    await env.MEDIA.put(mediaKey(p), bytes, { httpMetadata: { contentType: types[ext], cacheControl: 'public, max-age=31536000, immutable' } });
+    if (env.MEDIA) await env.MEDIA.put(mediaKey(p), bytes, { httpMetadata: { contentType: types[ext], cacheControl: 'public, max-age=31536000, immutable' } });
+    else await files(env).put(mediaKey(p), bytes, { metadata: { type: types[ext], size: bytes.length } });
     await log(env, 'upload', p, user);
-    return { path: p, sha: 'r2' };
+    return { path: p, sha: env.MEDIA ? 'r2' : 'kv' };
   }
   const body = String(content ?? '');
   if (body.length > 1024 * 1024) throw new HttpError(413, 'Content is too large.');
@@ -82,7 +93,7 @@ export async function writeFile(env, { path, content, sha, base64 }, user) {
 
 export async function deleteFile(env, { path }, user) {
   const p = safePath(path);
-  if (isMedia(p)) { await env.MEDIA.delete(mediaKey(p)); }
+  if (isMedia(p)) { if (env.MEDIA) await env.MEDIA.delete(mediaKey(p)); else await files(env).delete(mediaKey(p)); }
   else await db(env).prepare('DELETE FROM content WHERE path = ?').bind(p).run();
   await log(env, 'delete', p, user);
   return { ok: true };
@@ -95,10 +106,18 @@ export async function recentCommits(env) {
 
 // Serves R2 uploads at /uploads/<key>; returns null so the caller can fall back to bundled files.
 export async function serveMedia(env, key) {
-  if (!env.MEDIA || !key) return null;
-  const obj = await env.MEDIA.get(key);
-  if (!obj) return null;
-  const h = new Headers(); obj.writeHttpMetadata(h); h.set('ETag', obj.httpEtag); h.set('X-Content-Type-Options', 'nosniff');
+  if (!key) return null;
+  const h = new Headers({ 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'public, max-age=31536000, immutable' });
+  let body;
+  if (env.MEDIA) {
+    const obj = await env.MEDIA.get(key);
+    if (!obj) return null;
+    obj.writeHttpMetadata(h); h.set('ETag', obj.httpEtag); body = obj.body;
+  } else if (env.FILES) {
+    const { value, metadata } = await env.FILES.getWithMetadata(key, 'stream');
+    if (!value) return null;
+    h.set('Content-Type', metadata?.type || 'application/octet-stream'); body = value;
+  } else return null;
   if (h.get('Content-Type') === 'image/svg+xml') h.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
-  return new Response(obj.body, { headers: h });
+  return new Response(body, { headers: h });
 }

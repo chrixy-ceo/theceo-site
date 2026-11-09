@@ -84,7 +84,7 @@ const SECTIONS = [
   { id: 'site', label: 'Website', icon: '▤', tabs: [['s/settings.json', 'Profile'], ['s/about.json', 'About'], ['c/projects', 'Projects'], ['s/services.json', 'Services'], ['s/stack.json', 'Tools'], ['c/certifications', 'Certifications'], ['c/pages', 'Pages'], ['s/site.json', 'Blog & ads settings']] },
   { id: 'media', label: 'Media', icon: '▣', tabs: [['media', 'Images & files']] },
   { id: 'auto', label: 'Auto-posting', icon: '↻', tabs: [['news', 'Auto-posting']] },
-  { id: 'acct', label: 'Activity', icon: '≡', tabs: [['activity', 'Activity log']], hidden: true },
+  { id: 'acct', label: 'Account', icon: '≡', tabs: [['account', 'Password & login'], ['activity', 'Activity log']], hidden: true },
 ];
 const sectionOf = h => SECTIONS.find(sec => sec.tabs.some(([t]) => h === t || h.startsWith(t + '/'))) || SECTIONS[0];
 const SETTINGS = {
@@ -215,7 +215,7 @@ function shell() {
   $('#root').innerHTML = `<div id="app"><nav id="nav"><h1>The<span>CEO</span> Admin</h1>
     <button class="srch" id="sbtn"><span>Search…</span><kbd>Ctrl K</kbd></button>
     <div class="mainnav">${SECTIONS.filter(x => !x.hidden).map(x => `<a href="#${x.tabs[0][0]}" data-sec="${x.id}"><i>${x.icon}</i><span>${x.label}</span>${x.id === 'blog' ? '<span class="badge" id="nb" hidden></span>' : ''}</a>`).join('')}</div>
-    <div class="acct"><a href="#activity" data-sec="acct"><span>Activity log</span></a><a href="/" target="_blank"><span>View website ↗</span></a><a href="#" id="lo"><span>Sign out</span></a></div></nav>
+    <div class="acct"><a href="#account" data-sec="acct"><span>Account & password</span></a><a href="#activity"><span>Activity log</span></a><a href="/" target="_blank"><span>View website ↗</span></a><a href="#" id="lo"><span>Sign out</span></a></div></nav>
     <div id="scrim"></div><main><div class="crumb" id="crumb"></div><div class="top"><button class="btn" id="mbtn" aria-label="Menu">☰</button><h2 id="title"></h2><div id="actions" style="display:flex;gap:8px;flex-wrap:wrap"></div></div><div class="subnav" id="subnav"></div><div id="view"></div></main></div>`;
   $('#lo').onclick = async e => { e.preventDefault(); await api('logout', { method: 'POST' }).catch(() => {}); renderLogin('Signed out.'); };
   $('#mbtn').onclick = () => $('#nav').classList.toggle('open'); $('#scrim').onclick = () => $('#nav').classList.remove('open');
@@ -252,6 +252,7 @@ async function route() {
     if (a === 'media') return await viewMedia();
     if (a === 'news') return await viewNews();
     if (a === 'activity') return await viewActivity();
+    if (a === 'account') return await viewAccount();
     $('#view').textContent = 'Not found';
   } catch (e) { $('#view').innerHTML = `<div class="card"><b>Could not load this page.</b><p class="mu">${esc(e.message)}</p><button class="btn" onclick="route()">Try again</button></div>`; }
 }
@@ -306,6 +307,35 @@ async function viewActivity() {
   setHead('Activity log', '');
   const cs = await api('commits');
   $('#view').innerHTML = `<div class="card"><table class="resp"><tr><th>Change</th><th>By</th><th>When</th></tr>${cs.map(c => `<tr><td>${esc(c.message)}</td><td>${esc(c.author)}</td><td class="mu">${ago(c.date)}</td></tr>`).join('') || '<tr><td class="empty">No changes yet.</td></tr>'}</table></div>`;
+}
+
+/* ---------- Account & password ---------- */
+async function viewAccount() {
+  setHead('Account & password');
+  const a = await api('account');
+  $('#view').innerHTML = `<p class="sub">Change how you sign in to this admin.</p>
+    <div class="card"><h3>Signed in as ${esc(a.username)}</h3><p class="mu" style="margin:4px 0 0">${a.source === 'admin' ? 'Password last changed ' + ago(a.changed) + '.' : 'You are still using the first password set in Cloudflare. Change it here to use your own.'}</p></div>
+    <form class="card" id="pf" autocomplete="off"><h3>Change password</h3>
+      <div class="row2">
+        <div class="full"><label>Current password</label><input type="password" name="current" autocomplete="current-password" required></div>
+        <div><label>New password<span class="hint">At least 10 characters. A short sentence is easy to remember and hard to guess.</span></label><input type="password" name="password" autocomplete="new-password" minlength="10" required></div>
+        <div><label>Type the new password again<span class="hint">&nbsp;</span></label><input type="password" name="confirm" autocomplete="new-password" required></div>
+        <div><label>Username<span class="hint">Change it here if you want a different one.</span></label><input name="username" value="${esc(a.username)}" autocomplete="username" required></div>
+        <div><label>&nbsp;<span class="hint">&nbsp;</span></label><label style="font-weight:400;display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="show" style="width:auto"> Show passwords</label></div>
+      </div>
+      <div id="strength" class="mu" style="font-size:13px;margin-top:10px"></div>
+      <p class="mu" style="font-size:13px">Changing your password signs you out on every other device.</p>
+      <button class="btn p" id="pbtn">Change password</button>
+    </form>`;
+  const f = $('#pf');
+  $('#show').onchange = e => f.querySelectorAll('input[type=password],input[data-pw]').forEach(i => { i.dataset.pw = 1; i.type = e.target.checked ? 'text' : 'password'; });
+  f.password.oninput = () => { const v = f.password.value; const score = [v.length >= 10, v.length >= 14, /[A-Z]/.test(v) && /[a-z]/.test(v), /\d/.test(v), /[^A-Za-z0-9]/.test(v)].filter(Boolean).length; $('#strength').innerHTML = v ? `Strength: <b style="color:var(--${score >= 4 ? 'ok' : score >= 2 ? 'wa' : 'er'})">${score >= 4 ? 'Strong' : score >= 2 ? 'Okay' : 'Weak'}</b>` : ''; };
+  f.onsubmit = e => { e.preventDefault(); busy($('#pbtn'), async () => {
+    if (f.password.value !== f.confirm.value) throw new Error('The two new passwords do not match.');
+    if (f.password.value.length < 10) throw new Error('The new password must be at least 10 characters.');
+    await api('account/password', { method: 'POST', body: { current: f.current.value, password: f.password.value, username: f.username.value.trim() } });
+    ME.user = f.username.value.trim(); f.reset(); toast('Password changed. Other devices have been signed out.'); viewAccount();
+  }); };
 }
 
 /* ---------- Drafts review ---------- */

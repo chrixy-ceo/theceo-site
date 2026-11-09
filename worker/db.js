@@ -4,6 +4,7 @@
 // Media files go to R2 (binding MEDIA) when it is set up, otherwise to Workers KV (binding FILES,
 // created automatically on deploy). Either way they are served at /uploads/*.
 import { HttpError } from './errors.js';
+import { store } from './store.js';
 export { HttpError };
 
 const ALLOWED = /^(src\/content|public\/uploads)\/[A-Za-z0-9 _\-.()À-ɏ\/]+$/;
@@ -23,7 +24,7 @@ function files(env) {
 }
 
 // Tells every page that content changed, so cached copies reload on the next request.
-const bump = (env) => (env.NEWS ? env.NEWS.put('content:ver', String(Date.now())) : null);
+const bump = (env) => store(env).put('content:ver', String(Date.now()));
 
 function db(env) {
   if (!env.DB) throw new HttpError(503, 'The D1 database (binding DB) is not connected.');

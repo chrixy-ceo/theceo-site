@@ -19,6 +19,7 @@ export let opportunityFiles = [];
 export let source = 'none';
 
 let lastKey = '';
+let loadedVer = null, loadedAt = 0;
 
 function parseMd(path, text) {
   const m = String(text).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
@@ -52,10 +53,15 @@ function apply(entries, from) {
 
 export async function loadContent(env) {
   if (!env?.DB) throw new Error('D1 binding DB is missing.');
+  // A tiny KV read tells us whether anything was saved since we last loaded.
+  let ver = null;
+  try { ver = env.NEWS ? await env.NEWS.get('content:ver') : null; } catch {}
+  if (source === 'd1' && ver === loadedVer && Date.now() - loadedAt < 300000) return;
   try {
     const { results } = await env.DB.prepare("SELECT path, body FROM content WHERE path LIKE 'src/content/%'").all();
     if (!results.length) throw new Error('D1 has no content yet. Run the migrations.');
     apply(results.map((r) => [r.path.replace(/^src\//, ''), r.body]), 'd1');
+    loadedVer = ver; loadedAt = Date.now();
   } catch (e) {
     console.error('Content load failed:', e.message);
     if (source !== 'd1') throw e; // nothing good in memory yet

@@ -139,7 +139,7 @@ async function api(path, opts = {}) {
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && path !== 'login') { renderLogin(); throw new Error('Session expired. Please sign in again.'); }
   if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
-  if (opts.method && opts.method !== 'GET') for (const k in CACHE) delete CACHE[k];
+  if (opts.method && opts.method !== 'GET') { for (const k in CACHE) delete CACHE[k]; ALL = null; }
   return data;
 }
 async function busy(btn, fn) { const t = btn?.innerHTML; if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; } try { return await fn(); } catch (e) { toast(e.message, true); } finally { if (btn) { btn.disabled = false; btn.innerHTML = t; } } }
@@ -181,10 +181,16 @@ function md(src) {
 
 
 /* ---------- Data helpers ---------- */
+let ALL = null;
+async function loadAll(fresh) {
+  if (!fresh && ALL) return ALL;
+  ALL = api('all').catch(e => { ALL = null; throw e; });
+  return ALL;
+}
 async function loadItems(key, fresh) {
   const c = COLLECTIONS[key];
   if (!fresh && CACHE[key]) return CACHE[key];
-  const rows = await api('items?dir=' + c.dir);
+  const rows = (await loadAll(fresh)).filter(f => f.path.startsWith(c.dir + '/') && !f.path.slice(c.dir.length + 1).includes('/'));
   return CACHE[key] = rows.filter(f => /\.(md|json)$/.test(f.name)).map(f => {
     let d = {}, body = '';
     try { if (c.type === 'md') { const p = parseMd(f.content); d = p.fields; body = p.body; if (p.raw) d = Object.fromEntries([...p.raw.matchAll(/^([A-Za-z0-9_]+):\s?(.*)$/gm)].map(m => [m[1], m[2].replace(/^["']|["']$/g, '')])); } else d = JSON.parse(f.content); } catch {}

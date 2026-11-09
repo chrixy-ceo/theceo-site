@@ -22,6 +22,9 @@ function files(env) {
   return env.FILES;
 }
 
+// Tells every page that content changed, so cached copies reload on the next request.
+const bump = (env) => (env.NEWS ? env.NEWS.put('content:ver', String(Date.now())) : null);
+
 function db(env) {
   if (!env.DB) throw new HttpError(503, 'The D1 database (binding DB) is not connected.');
   return env.DB;
@@ -52,6 +55,12 @@ export async function listDir(env, dir) {
 export async function listItems(env, dir) {
   const d = safePath(dir).replace(/\/$/, '');
   const { results } = await db(env).prepare("SELECT path, body, version, updated_at, updated_by FROM content WHERE path LIKE ? AND path NOT LIKE ? ORDER BY path").bind(d + '/%', d + '/%/%').all();
+  return results.map((r) => ({ name: r.path.split('/').pop(), path: r.path, sha: String(r.version), content: r.body, updated: r.updated_at, by: r.updated_by }));
+}
+
+// All content items in one query (admin lists, counts, drafts and search load from this).
+export async function listAll(env) {
+  const { results } = await db(env).prepare("SELECT path, body, version, updated_at, updated_by FROM content WHERE path LIKE 'src/content/%'").all();
   return results.map((r) => ({ name: r.path.split('/').pop(), path: r.path, sha: String(r.version), content: r.body, updated: r.updated_at, by: r.updated_by }));
 }
 
@@ -86,7 +95,7 @@ export async function writeFile(env, { path, content, sha, base64 }, user) {
     const r = await db(env).prepare('INSERT INTO content (path, body, version, updated_at, updated_by) VALUES (?, ?, 1, ?, ?) ON CONFLICT(path) DO NOTHING').bind(p, body, now, user || 'admin').run();
     if (!r.meta.changes) throw new HttpError(409, 'Something with this name already exists. Choose another name.');
   }
-  await log(env, sha ? 'update' : 'create', p, user);
+  await Promise.all([log(env, sha ? 'update' : 'create', p, user), bump(env)]);
   const row = await db(env).prepare('SELECT version FROM content WHERE path = ?').bind(p).first();
   return { path: p, sha: String(row.version) };
 }
@@ -94,7 +103,7 @@ export async function writeFile(env, { path, content, sha, base64 }, user) {
 export async function deleteFile(env, { path }, user) {
   const p = safePath(path);
   if (isMedia(p)) { if (env.MEDIA) await env.MEDIA.delete(mediaKey(p)); else await files(env).delete(mediaKey(p)); }
-  else await db(env).prepare('DELETE FROM content WHERE path = ?').bind(p).run();
+  else { await db(env).prepare('DELETE FROM content WHERE path = ?').bind(p).run(); await bump(env); }
   await log(env, 'delete', p, user);
   return { ok: true };
 }

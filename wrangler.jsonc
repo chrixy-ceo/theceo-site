@@ -16,7 +16,7 @@
   // Uploaded images and files live in KV (FILES). To use R2 instead, enable R2, create a bucket
   // and add: "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "<your bucket>" }]
   // Story cache, run log, used-story list, login lockouts.
-  "kv_namespaces": [{ "binding": "NEWS" }, { "binding": "FILES" }],
+  "kv_namespaces": [{ "binding": "NEWS", "id": "41c611bf753146d7a22f8b48779b59b9" }, { "binding": "FILES" }],
   // Workers AI writes the hourly auto-posts.
   "ai": { "binding": "AI" },
   // Hourly: collect stories (Google + Bing News) and auto-post the top one per blog category.

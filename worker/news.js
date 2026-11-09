@@ -1,3 +1,4 @@
+import { store } from './store.js';
 import { autoPost, blogCategories } from './autopost.js';
 import { opportunityCategories } from './infobytes.js';
 
@@ -38,7 +39,7 @@ const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function getConfig(env) {
-  const saved = env.NEWS ? await env.NEWS.get(KEY_CONFIG, 'json') : null;
+  const saved = env.DB ? await store(env).get(KEY_CONFIG, 'json') : null;
   const OLD = { Grants: 'grant applications open Africa', Jobs: 'jobs hiring Nigeria', Scholarships: 'scholarship Nigerian students', Fellowships: 'fellowship programme Africa applications', Tech: 'technology Africa startups' };
   const queries = { ...DEFAULT_CONFIG.queries };
   for (const [k, v] of Object.entries(saved?.queries || {})) if (v && OLD[k] !== v) queries[k] = v;
@@ -55,7 +56,7 @@ export async function saveConfig(env, cfg) {
   clean.maxAgeDays = Math.min(60, Math.max(1, Number(clean.maxAgeDays) || 7));
   clean.extra = (Array.isArray(clean.extra) ? clean.extra : String(clean.extra).split(',')).map((s) => String(s).trim()).filter(Boolean);
   clean.disabled = (Array.isArray(clean.disabled) ? clean.disabled : String(clean.disabled).split(',')).map((s) => String(s).trim()).filter(Boolean);
-  await env.NEWS.put(KEY_CONFIG, JSON.stringify(clean));
+  await store(env).put(KEY_CONFIG, JSON.stringify(clean));
   return clean;
 }
 
@@ -180,21 +181,22 @@ async function pool(items, limit, fn) {
 }
 
 export async function runNews(env, { trigger = 'cron', force = false } = {}) {
-  if (!env.NEWS) return { ok: false, error: 'NEWS KV binding is missing.' };
+  if (!env.DB) return { ok: false, error: 'The database is not connected.' };
   const cfg = await getConfig(env);
   if (!cfg.enabled && !force) return { ok: true, skipped: 'disabled' };
 
-  const lock = await env.NEWS.get(KEY_LOCK);
+  const lockRaw = await store(env).get(KEY_LOCK);
+  const lock = lockRaw && Number(lockRaw.split('|')[1]) > Date.now() ? lockRaw.split('|')[0] : null;
   if (lock && !force) return { ok: true, skipped: 'another run in progress' };
   const runId = crypto.randomUUID();
-  await env.NEWS.put(KEY_LOCK, runId, { expirationTtl: 900 }); // reading pages and writing can take a few minutes
+  await store(env).put(KEY_LOCK, runId + '|' + (Date.now() + 900e3)); // reading pages and writing can take a few minutes
 
   const started = Date.now();
   try {
     const target = cfg.autopost?.target || 'infobytes';
     const own = [...(target !== 'blog' ? await opportunityCategories(env) : []), ...(target !== 'infobytes' ? await blogCategories(env) : [])];
     const names = [...new Set([...own, ...cfg.extra])].filter((c) => !cfg.disabled.includes(c));
-    const prev = (await env.NEWS.get(KEY_DATA, 'json')) || { categories: {} };
+    const prev = (await store(env).get(KEY_DATA, 'json')) || { categories: {} };
     const results = await pool(names, 4, (name) => collect(name, cfg, prev.categories[slugify(name)]?.items));
 
     const categories = {};
@@ -214,28 +216,28 @@ export async function runNews(env, { trigger = 'cron', force = false } = {}) {
     });
 
     const data = { generated: new Date().toISOString(), categories };
-    await env.NEWS.put(KEY_DATA, JSON.stringify(data));
+    await store(env).put(KEY_DATA, JSON.stringify(data));
 
     let posts = [];
     try { posts = await autoPost(env, cfg, categories); } catch (e) { posts = [{ error: String(e?.message || e) }]; console.error('autopost_failed', e?.stack || e); }
     const run = { id: runId, trigger, at: new Date(started).toISOString(), ms: Date.now() - started, ok: report.every((r) => r.ok), total: report.length, failed: report.filter((r) => !r.ok).length, report, posts };
-    const runs = ((await env.NEWS.get(KEY_RUNS, 'json')) || []).slice(0, 47);
-    await env.NEWS.put(KEY_RUNS, JSON.stringify([run, ...runs]));
+    const runs = ((await store(env).get(KEY_RUNS, 'json')) || []).slice(0, 47);
+    await store(env).put(KEY_RUNS, JSON.stringify([run, ...runs]));
     console.log(JSON.stringify({ event: 'news_run', ...run, report: undefined }));
     return { ok: true, run };
   } catch (e) {
     console.error('news_run_failed', e?.stack || e);
-    const runs = ((await env.NEWS.get(KEY_RUNS, 'json')) || []).slice(0, 47);
-    await env.NEWS.put(KEY_RUNS, JSON.stringify([{ id: runId, trigger, at: new Date(started).toISOString(), ms: Date.now() - started, ok: false, fatal: String(e?.message || e) }, ...runs]));
+    const runs = ((await store(env).get(KEY_RUNS, 'json')) || []).slice(0, 47);
+    await store(env).put(KEY_RUNS, JSON.stringify([{ id: runId, trigger, at: new Date(started).toISOString(), ms: Date.now() - started, ok: false, fatal: String(e?.message || e) }, ...runs]));
     return { ok: false, error: String(e?.message || e) };
   } finally {
-    if ((await env.NEWS.get(KEY_LOCK)) === runId) await env.NEWS.delete(KEY_LOCK);
+    if (String(await store(env).get(KEY_LOCK) || '').startsWith(runId + '|')) await store(env).delete(KEY_LOCK);
   }
 }
 
 export async function newsStatus(env) {
-  if (!env.NEWS) return { kv: false };
-  const [data, runs, config, lock] = await Promise.all([env.NEWS.get(KEY_DATA, 'json'), env.NEWS.get(KEY_RUNS, 'json'), getConfig(env), env.NEWS.get(KEY_LOCK)]);
+  if (!env.DB) return { kv: false };
+  const [data, runs, config, lock] = await Promise.all([store(env).get(KEY_DATA, 'json'), store(env).get(KEY_RUNS, 'json'), getConfig(env), store(env).get(KEY_LOCK)]);
   return {
     kv: true, running: Boolean(lock), config, runs: runs || [], generated: data?.generated || null,
     categories: Object.values(data?.categories || {}).map(({ name, slug, items, updated, failures, error }) => ({ name, slug, count: items.length, updated, failures, error })),

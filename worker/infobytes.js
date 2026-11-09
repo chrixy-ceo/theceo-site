@@ -12,6 +12,7 @@
 //   5. The post is written in the site's exact Infobytes template (same headings and order as the
 //      hand-written ones). Drafts unless auto-publish is on. Each story is used at most once.
 import { writeFile } from './db.js';
+import { store } from './store.js';
 
 const WRITER = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const EMBED = '@cf/baai/bge-base-en-v1.5';
@@ -39,6 +40,20 @@ function copiedShare(source, draft) {
   const src = new Set(); const s = words(source); for (let i = 0; i + 8 <= s.length; i++) src.add(s.slice(i, i + 8).join(' '));
   const d = words(draft); let n = 0, hit = 0; for (let i = 0; i + 8 <= d.length; i++) { n++; if (src.has(d.slice(i, i + 8).join(' '))) hit++; }
   return n ? hit / n : 0;
+}
+
+// Google News links hide the publisher's address. Decode them (two small requests to Google)
+// so the writer can read the real page. Returns null if Google refuses.
+async function resolveGoogle(link) {
+  const id = new URL(link).pathname.split('/').pop();
+  const ua = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36' };
+  const page = await (await fetch(`https://news.google.com/rss/articles/${id}`, { headers: ua })).text();
+  const sig = (page.match(/data-n-a-sg="([^"]+)"/) || [])[1], ts = (page.match(/data-n-a-ts="([^"]+)"/) || [])[1];
+  if (!sig || !ts) return null;
+  const req = [[['Fbv4je', JSON.stringify(['garturlreq', [['X', 'X', ['X', 'X'], null, null, 1, 1, 'US:en', null, 1, null, null, null, null, null, 0, 1], 'X', 'X', 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0], id, Number(ts), sig])]]];
+  const r = await fetch('https://news.google.com/_/DotsSplashUi/data/batchexecute', { method: 'POST', headers: { ...ua, 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: 'f.req=' + encodeURIComponent(JSON.stringify(req)) });
+  const url = ((await r.text()).match(/\\"garturlres\\",\\"(https?:[^\\]+)\\"/) || [])[1];
+  return url || null;
 }
 
 // Fetch the source page: readable text, links and share image.
@@ -138,11 +153,11 @@ export async function autoOpportunities(env, cfg, categories) {
   const { results } = await env.DB.prepare(`SELECT path, body, updated_by, updated_at FROM content WHERE path LIKE '${DIR}/%.md'`).all();
   const existing = results.map((r) => ({ ...r, fm: fmOf(r.body) }));
   const opCats = new Set(existing.map((r) => r.fm.category).filter(Boolean));
-  const used = new Set((await env.NEWS.get(KEY_USED, 'json')) || []);
+  const used = new Set((await store(env).get(KEY_USED, 'json')) || []);
   const knownUrls = new Set(existing.flatMap((r) => [r.fm.apply_url, r.fm.source_url]).filter(Boolean));
 
   // Fingerprints of existing listings (built once, then kept up to date).
-  let fps = (await env.NEWS.get(KEY_FP, 'json')) || [];
+  let fps = (await store(env).get(KEY_FP, 'json')) || [];
   const have = new Set(fps.map((f) => f.path));
   const missing = existing.filter((r) => !have.has(r.path)).slice(0, 40);
   if (missing.length) { const v = await embed(env, missing.map((r) => `${r.fm.title}. ${r.fm.organization || ''}. ${r.body.replace(/^---[\s\S]*?---/, '').slice(0, 1000)}`)); missing.forEach((r, i) => fps.push({ path: r.path, v: round(v[i]) })); }
@@ -156,8 +171,8 @@ export async function autoOpportunities(env, cfg, categories) {
 
     // Only stories whose page we can read (direct links), fresh, not seen before.
     // Opportunities stay open for weeks, so freshness is not a gate here: the AI decides what is a real open call.
-    const cands = c.items.filter((i) => !used.has(key(i.title)) && !/news\.google\.com/.test(i.link) && !knownUrls.has(i.link)).slice(0, 6);
-    if (!cands.length) { out.push({ category: c.name, skipped: 'no fresh high-priority story with a readable page' }); continue; }
+    const cands = c.items.filter((i) => !used.has(key(i.title)) && !knownUrls.has(i.link)).slice(0, 6);
+    if (!cands.length) { out.push({ category: c.name, skipped: 'no new stories this hour' }); continue; }
     const vecs = await embed(env, cands.map((s) => `${s.title}. ${s.summary || ''}`));
 
     let made = null;
@@ -166,7 +181,12 @@ export async function autoOpportunities(env, cfg, categories) {
       const near = fps.reduce((m, f) => Math.max(m, cosine(vecs[i], f.v)), 0);
       if (near >= SAME) { out.push({ category: c.name, skipped: `already listed: ${story.title}`, similarity: +near.toFixed(3) }); continue; }
       let page;
-      try { page = await readPage(story.link); } catch (e) { out.push({ category: c.name, skipped: `${story.title}: could not read page (${e.message})` }); continue; }
+      try {
+        let link = story.link;
+        if (/news\.google\.com/.test(link)) { link = await resolveGoogle(link).catch(() => null); if (!link) throw new Error('Google did not reveal the article address'); }
+        if (knownUrls.has(link)) { out.push({ category: c.name, skipped: `already listed: ${story.title}` }); continue; }
+        page = await readPage(link);
+      } catch (e) { out.push({ category: c.name, skipped: `${story.title}: could not read page (${e.message})` }); continue; }
       if (knownUrls.has(page.url)) { out.push({ category: c.name, skipped: `already listed: ${story.title}` }); continue; }
 
       let o, note = '', why = '';
@@ -217,6 +237,6 @@ export async function autoOpportunities(env, cfg, categories) {
     fps.push({ path, v: round(made.vec) }); knownUrls.add(apply); knownUrls.add(page.url);
     out.push({ category: c.name, created: path, title: o.title, kind: 'opportunity', ai: true, deadline: o.deadline || 'none', official_apply: officialApply, score: story.score, copied: +o.copied.toFixed(2) });
   }
-  await Promise.all([env.NEWS.put(KEY_USED, JSON.stringify([...used].slice(-3000))), env.NEWS.put(KEY_FP, JSON.stringify(fps.slice(-500)))]);
+  await Promise.all([store(env).put(KEY_USED, JSON.stringify([...used].slice(-3000))), store(env).put(KEY_FP, JSON.stringify(fps.slice(-500)))]);
   return out;
 }

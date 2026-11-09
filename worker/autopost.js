@@ -8,6 +8,7 @@
 //      existing post, are rewritten once and dropped if still too close.
 // Every story is considered at most once. Posts are drafts unless auto-publish is switched on.
 import { writeFile } from './db.js';
+import { store } from './store.js';
 import { autoOpportunities } from './infobytes.js';
 
 const KEY_USED = 'autopost:used';
@@ -70,7 +71,7 @@ async function allPosts(env) {
 // Fingerprints of recent posts, kept in KV. Built from existing posts on first use.
 async function loadFingerprints(env, posts) {
   const cutoff = Date.now() - FP_DAYS * 864e5;
-  let fps = ((await env.NEWS.get(KEY_FP, 'json')) || []).filter((f) => f.at >= cutoff);
+  let fps = ((await store(env).get(KEY_FP, 'json')) || []).filter((f) => f.at >= cutoff);
   const known = new Set(fps.map((f) => f.path));
   const missing = posts.filter((p) => !known.has(p.path)).slice(0, 40);
   if (missing.length) {
@@ -119,8 +120,8 @@ async function autoBlog(env, cfg, categories) {
 
   const posts = await allPosts(env);
   const blogCats = new Set(posts.map((p) => p.fm.category).filter(Boolean));
-  const used = new Set((await env.NEWS.get(KEY_USED, 'json')) || []);
-  const lastFormats = (await env.NEWS.get(KEY_FMT, 'json')) || {};
+  const used = new Set((await store(env).get(KEY_USED, 'json')) || []);
+  const lastFormats = (await store(env).get(KEY_FMT, 'json')) || {};
   const fps = await loadFingerprints(env, posts);
   const since = Date.now() - 864e5;
   // Style examples: the newest human-written posts (never auto-posts, to avoid drifting).
@@ -190,9 +191,9 @@ async function autoBlog(env, cfg, categories) {
   }
 
   await Promise.all([
-    env.NEWS.put(KEY_USED, JSON.stringify([...used].slice(-3000))),
-    env.NEWS.put(KEY_FP, JSON.stringify(fps.slice(-400))),
-    env.NEWS.put(KEY_FMT, JSON.stringify(lastFormats)),
+    store(env).put(KEY_USED, JSON.stringify([...used].slice(-3000))),
+    store(env).put(KEY_FP, JSON.stringify(fps.slice(-400))),
+    store(env).put(KEY_FMT, JSON.stringify(lastFormats)),
   ]);
   return out;
 }

@@ -53,9 +53,9 @@ function apply(entries, from) {
 
 export async function loadContent(env) {
   if (!env?.DB) throw new Error('D1 binding DB is missing.');
-  // A tiny KV read tells us whether anything was saved since we last loaded.
+  // A tiny D1 read tells us whether anything was saved since we last loaded.
   let ver = null;
-  try { ver = env.NEWS ? await env.NEWS.get('content:ver') : null; } catch {}
+  try { ver = (await env.DB.prepare("SELECT value FROM meta WHERE key = 'content:ver'").first())?.value ?? null; } catch {}
   if (source === 'd1' && ver === loadedVer && Date.now() - loadedAt < 300000) return;
   try {
     const { results } = await env.DB.prepare("SELECT path, body FROM content WHERE path LIKE 'src/content/%'").all();

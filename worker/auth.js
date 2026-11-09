@@ -1,3 +1,4 @@
+import { store } from './store.js';
 // Admin authentication: password login, HMAC-signed session cookie, brute-force lockout,
 // and password changes from the admin.
 // The first password comes from the ADMIN_PASSWORD secret. Once changed in the admin, a salted
@@ -42,11 +43,11 @@ async function pbkdf2(password, salt, iter = ITER) {
 }
 
 async function storedCreds(env) {
-  return env.NEWS ? await env.NEWS.get(KEY_CREDS, 'json') : null;
+  return env.DB ? await store(env).get(KEY_CREDS, 'json') : null;
 }
 
 async function sessionVersion(env) {
-  return env.NEWS ? (await env.NEWS.get(KEY_VER)) || '0' : '0';
+  return env.DB ? (await store(env).get(KEY_VER)) || '0' : '0';
 }
 
 export async function authConfigured(env) {
@@ -122,16 +123,16 @@ export async function login(request, env) {
 // Change username and/or password. Requires the current password; signs out every other device
 // and returns a fresh session cookie for this one.
 export async function changePassword(request, env, session, body = {}) {
-  if (!env.NEWS) return { ok: false, status: 503, error: 'Storage for the new password is not connected.' };
+  if (!env.DB) return { ok: false, status: 503, error: 'The database is not connected.' };
   const current = String(body.current || '');
   const next = String(body.password || '');
   const user = String(body.username || session.u || '').trim();
 
   const lockKey = 'auth:fail:' + ipOf(request);
-  const fails = Number((await env.NEWS.get(lockKey)) || 0);
+  const fails = env.NEWS ? Number((await env.NEWS.get(lockKey)) || 0) : 0;
   if (fails >= MAX_FAILS) return { ok: false, status: 429, error: 'Too many attempts. Try again in 15 minutes.' };
   if (!(await checkCredentials(env, await currentUsername(env), current))) {
-    await env.NEWS.put(lockKey, String(fails + 1), { expirationTtl: LOCK_SECONDS });
+    if (env.NEWS) await env.NEWS.put(lockKey, String(fails + 1), { expirationTtl: LOCK_SECONDS });
     return { ok: false, status: 400, error: 'Your current password is not correct.' };
   }
   if (!/^[A-Za-z0-9._@-]{3,40}$/.test(user)) return { ok: false, status: 400, error: 'Username: 3–40 letters, numbers, dots, dashes or @.' };
@@ -139,8 +140,8 @@ export async function changePassword(request, env, session, body = {}) {
   if (next === current && user === session.u) return { ok: false, status: 400, error: 'The new password is the same as the current one.' };
 
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  await env.NEWS.put(KEY_CREDS, JSON.stringify({ user, salt: b64(salt), iter: ITER, hash: await pbkdf2(next, salt), changed: new Date().toISOString() }));
-  await env.NEWS.put(KEY_VER, String(Date.now())); // invalidates all existing sessions
+  await store(env).put(KEY_CREDS, JSON.stringify({ user, salt: b64(salt), iter: ITER, hash: await pbkdf2(next, salt), changed: new Date().toISOString() }));
+  await store(env).put(KEY_VER, String(Date.now())); // invalidates all existing sessions
   return { ok: true, cookie: await createSession(env, user) };
 }
 

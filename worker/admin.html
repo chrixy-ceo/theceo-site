@@ -5,64 +5,109 @@
 <title>Site Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f7f9;--pn:#fff;--tx:#14171f;--mu:#667085;--ln:#e4e7ec;--ac:#0f9f8f;--ac2:#0b7d71;--er:#d92d20;--ok:#079455;--wa:#dc6803;--sh:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06)}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d1117;--pn:#161b22;--tx:#e6edf3;--mu:#8b949e;--ln:#30363d;--sh:none}}
-:root[data-theme=dark]{--bg:#0d1117;--pn:#161b22;--tx:#e6edf3;--mu:#8b949e;--ln:#30363d;--sh:none}
+:root{--bg:#f6f7f9;--pn:#fff;--tx:#14171f;--mu:#667085;--ln:#e4e7ec;--ac:#0f9f8f;--ac2:#0b7d71;--acbg:#e6f6f4;--er:#d92d20;--ok:#079455;--wa:#dc6803;--sh:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d1117;--pn:#161b22;--tx:#e6edf3;--mu:#8b949e;--ln:#30363d;--acbg:#10302c;--sh:none}}
+:root[data-theme=dark]{--bg:#0d1117;--pn:#161b22;--tx:#e6edf3;--mu:#8b949e;--ln:#30363d;--acbg:#10302c;--sh:none}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 Inter,system-ui,sans-serif}
 a{color:var(--ac)}button,input,select,textarea{font:inherit;color:inherit}
-.btn{text-decoration:none;display:inline-block;border:1px solid var(--ln);background:var(--pn);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:500;white-space:nowrap}
-.btn:hover{border-color:var(--ac)}.btn.p{background:var(--ac);border-color:var(--ac);color:#fff}.btn.p:hover{background:var(--ac2)}.btn.d{color:var(--er)}.btn:disabled{opacity:.5;cursor:wait}
+.btn{text-decoration:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ln);background:var(--pn);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:500;white-space:nowrap;color:var(--tx)}
+.btn:hover{border-color:var(--ac)}.btn.p{background:var(--ac);border-color:var(--ac);color:#fff}.btn.p:hover{background:var(--ac2)}.btn.d{color:var(--er)}.btn.d:hover{border-color:var(--er)}.btn:disabled{opacity:.5;cursor:wait}.btn.sm{padding:5px 10px;font-size:13px}
 input,select,textarea{width:100%;padding:9px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--bg)}
 input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--ac) 40%,transparent);border-color:var(--ac)}
 textarea{min-height:90px;resize:vertical}textarea.code{font:13px/1.55 ui-monospace,Menlo,monospace}
-label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}label small{font-weight:400;color:var(--mu)}
-#app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-nav{background:var(--pn);border-right:1px solid var(--ln);padding:18px 12px;position:sticky;top:0;height:100vh;overflow:auto}
-nav h1{font-size:16px;margin:4px 10px 18px}nav h1 span{color:var(--ac)}
-nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:16px 10px 6px}
-nav a{display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;color:var(--tx);text-decoration:none}
-nav a:hover{background:var(--bg)}nav a.on{background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac);font-weight:600}
-main{padding:28px;max-width:1150px;width:100%}
+label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}.hint{display:block;font-weight:400;color:var(--mu);font-size:12.5px;margin-top:2px}
+#app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+nav{background:var(--pn);border-right:1px solid var(--ln);padding:16px 12px 24px;position:sticky;top:0;height:100vh;overflow:auto}
+nav h1{font-size:16px;margin:4px 10px 14px}nav h1 span{color:var(--ac)}
+.srch{display:flex;align-items:center;justify-content:space-between;width:100%;margin:0 0 10px;padding:8px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--bg);color:var(--mu);cursor:pointer;text-align:left}.srch kbd{font:11px ui-monospace,monospace;border:1px solid var(--ln);border-radius:5px;padding:1px 5px}
+nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:18px 10px 6px;font-weight:600}
+nav a{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;color:var(--tx);text-decoration:none}
+nav a:hover{background:var(--bg)}nav a.on{background:var(--acbg);color:var(--ac);font-weight:600}
+.badge{min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--wa);color:#fff;font-size:11.5px;font-weight:700;display:inline-grid;place-items:center}
+main{padding:24px 28px 120px;max-width:1150px;width:100%}
+.crumb{font-size:13px;color:var(--mu);margin-bottom:6px;min-height:20px}.crumb a{color:var(--mu);text-decoration:none}.crumb a:hover{color:var(--ac)}
 .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}.top h2{margin:0;font-size:22px;margin-right:auto}
+.sub{color:var(--mu);margin:-12px 0 20px}
 .card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:18px;box-shadow:var(--sh);margin-bottom:16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-.stat b{display:block;font-size:26px}.stat span{color:var(--mu)}
-table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px 8px;border-bottom:1px solid var(--ln);vertical-align:top}th{font-size:12px;color:var(--mu);font-weight:600}
+.card h3{margin:0 0 4px;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.task{display:block;text-decoration:none;color:var(--tx);background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:16px;transition:border-color .15s,transform .15s}
+.task:hover{border-color:var(--ac);transform:translateY(-2px)}.task b{display:block;font-size:15px;margin-bottom:2px}.task span{color:var(--mu);font-size:13px}.task i{font-style:normal;font-size:20px;display:block;margin-bottom:8px;color:var(--ac)}
+.stat b{display:block;font-size:24px}.stat span{color:var(--mu)}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px 8px;border-bottom:1px solid var(--ln);vertical-align:middle}th{font-size:12px;color:var(--mu);font-weight:600}
 tr.row{cursor:pointer}tr.row:hover td{background:var(--bg)}
-.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:var(--bg);border:1px solid var(--ln)}.pill.ok{color:var(--ok)}.pill.er{color:var(--er)}.pill.wa{color:var(--wa)}
-.mu{color:var(--mu)}.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;background:var(--bg);border:1px solid var(--ln);white-space:nowrap}.pill.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--ln))}.pill.er{color:var(--er)}.pill.wa{color:var(--wa);border-color:color-mix(in srgb,var(--wa) 35%,var(--ln))}.pill.ac{color:var(--ac)}
+.mu{color:var(--mu)}.row2{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}.full{grid-column:1/-1}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{border:1px solid var(--ln);background:var(--pn);border-radius:99px;padding:5px 12px;cursor:pointer;font-size:13px}.tabs button[aria-pressed=true]{background:var(--tx);color:var(--bg);border-color:var(--tx)}
 .ed{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pv{border:1px solid var(--ln);border-radius:10px;padding:4px 16px;max-height:620px;overflow:auto;background:var(--bg)}.pv img{max-width:100%}
 .imgf{display:flex;gap:8px;align-items:center}.imgf img{width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--ln)}
 .media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.media div{border:1px solid var(--ln);border-radius:10px;padding:8px;font-size:12px;word-break:break-all}.media img{width:100%;height:110px;object-fit:cover;border-radius:6px;background:var(--bg)}
-#toast{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:99}#toast div{background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;box-shadow:var(--sh);max-width:380px}#toast div.er{background:var(--er);color:#fff}
-.login{max-width:380px;margin:12vh auto}.chk li{margin:6px 0}
-#mbtn{display:none}
-#scrim{display:none}
-@media(max-width:820px){#app{grid-template-columns:1fr}nav{position:fixed;inset:0 auto 0 0;width:min(300px,82vw);z-index:50;transform:translateX(-105%);transition:transform .22s ease;height:100dvh;box-shadow:0 0 40px rgba(0,0,0,.4)}nav.open{transform:none}nav.open+#scrim{display:block;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5)}
-#mbtn{display:inline-block}main{padding:14px 14px 90px}.ed,.row2{grid-template-columns:1fr}.top{position:sticky;top:0;z-index:20;background:var(--bg);margin:-14px -14px 14px;padding:12px 14px;border-bottom:1px solid var(--ln)}.top h2{font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#actions{width:100%}#actions .btn{flex:1;text-align:center}.grid{grid-template-columns:1fr 1fr;gap:10px}.card{padding:14px;border-radius:12px}.stat b{font-size:22px}
+.sect{margin-bottom:16px}.sect>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center}.sect>summary::-webkit-details-marker{display:none}.sect>summary::after{content:'▾';color:var(--mu)}.sect:not([open])>summary::after{content:'▸'}
+.li{border:1px solid var(--ln);border-radius:12px;padding:4px 14px 14px;margin-bottom:10px;background:var(--bg)}.li-h{display:flex;justify-content:space-between;align-items:center;padding-top:8px}.li-h b{font-size:13px;color:var(--mu)}.li-h span{display:flex;gap:4px}
+.status{display:flex;gap:0;border:1px solid var(--ln);border-radius:10px;overflow:hidden;width:max-content}.status button{border:0;background:var(--pn);padding:8px 14px;cursor:pointer;font-weight:500}.status button[aria-pressed=true]{background:var(--ac);color:#fff}
+.savebar{position:fixed;left:250px;right:0;bottom:0;z-index:30;background:var(--pn);border-top:1px solid var(--ln);padding:12px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 -4px 16px rgba(16,24,40,.06)}.savebar .st{margin-right:auto;color:var(--mu);display:flex;align-items:center;gap:8px}.savebar .st i{width:8px;height:8px;border-radius:50%;background:var(--ok)}.savebar.dirty .st i{background:var(--wa)}.savebar.dirty .st{color:var(--tx);font-weight:500}
+.empty{text-align:center;padding:40px 20px;color:var(--mu)}
+#pal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);display:none;align-items:flex-start;justify-content:center;padding-top:12vh}#pal.on{display:flex}
+#pal .box{width:min(620px,92vw);background:var(--pn);border:1px solid var(--ln);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+#pal input{border:0;border-bottom:1px solid var(--ln);border-radius:0;padding:16px 18px;font-size:16px;background:var(--pn);outline:none}
+#pal ul{list-style:none;margin:0;padding:6px;max-height:50vh;overflow:auto}#pal li a{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:8px;color:var(--tx);text-decoration:none}#pal li a span{color:var(--mu);font-size:12.5px}#pal li a.sel{background:var(--acbg)}
+#toast{position:fixed;bottom:76px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:99}#toast div{background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;box-shadow:var(--sh);max-width:380px}#toast div.er{background:var(--er);color:#fff}
+.login{max-width:380px;margin:12vh auto}.chk{margin:8px 0 0;padding-left:18px}.chk li{margin:4px 0}
+#mbtn{display:none}#scrim{display:none}
+@media(max-width:820px){#app{grid-template-columns:1fr}nav{position:fixed;inset:0 auto 0 0;width:min(300px,84vw);z-index:50;transform:translateX(-105%);transition:transform .22s ease;height:100dvh;box-shadow:0 0 40px rgba(0,0,0,.4)}nav.open{transform:none}nav.open+#scrim{display:block;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5)}
+#mbtn{display:inline-flex}main{padding:12px 14px 120px}.ed,.row2{grid-template-columns:1fr}.top{position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -14px 14px;padding:10px 14px;border-bottom:1px solid var(--ln)}.top h2{font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#actions{width:100%}#actions .btn{flex:1;justify-content:center}.grid{grid-template-columns:1fr 1fr;gap:10px}.card{padding:14px;border-radius:12px}
 table.resp thead,table.resp tr:has(th){display:none}table.resp tr{display:block;padding:12px 4px;border-bottom:1px solid var(--ln)}table.resp td{display:inline;border:0;padding:0 8px 0 0}table.resp td:first-child{display:block;margin-bottom:4px}
-.pv{display:none}.ed.show-pv .pv{display:block}.ed.show-pv textarea{display:none}#pvt{display:inline-block!important}textarea.code{min-height:50vh!important}
-input,select,textarea{font-size:16px}.media{grid-template-columns:1fr 1fr}#toast{left:12px;right:12px;bottom:12px}}
+.pv{display:none}.ed.show-pv .pv{display:block}.ed.show-pv textarea{display:none}#pvt{display:inline-flex!important}textarea.code{min-height:50vh!important}
+input,select,textarea{font-size:16px}.media{grid-template-columns:1fr 1fr}#toast{left:12px;right:12px;bottom:76px}.savebar{left:0;padding:10px 14px}}
 </style>
 </head>
 <body>
 <div id="root"></div><div id="toast"></div>
+<div id="pal" role="dialog" aria-label="Search"><div class="box"><input id="palq" placeholder="Search posts, opportunities, pages, settings…" autocomplete="off"><ul id="pall"></ul></div></div>
 <script>
 const COLLECTIONS = {
-  posts:          { label: 'Blog posts',     dir: 'src/content/posts',          type: 'md',   public: s => '/blog/' + s + '/' },
-  opportunities:  { label: 'Opportunities',  dir: 'src/content/opportunities',  type: 'md',   public: s => '/infobytes/' + s + '/' },
-  pages:          { label: 'Pages',          dir: 'src/content/pages',          type: 'md',   public: s => '/' + s + '/' },
-  projects:       { label: 'Projects',       dir: 'src/content/projects',       type: 'json', public: s => '/projects/' + s + '/' },
-  certifications: { label: 'Certifications', dir: 'src/content/certifications', type: 'json' },
+  posts:          { label: 'Blog posts',     one: 'blog post',     dir: 'src/content/posts',          type: 'md',   public: s => '/blog/' + s + '/', hint: 'Articles on your blog. Auto-posts arrive here as drafts.' },
+  opportunities:  { label: 'Opportunities',  one: 'opportunity',   dir: 'src/content/opportunities',  type: 'md',   public: s => '/infobytes/' + s + '/', hint: 'Scholarships, jobs, grants and fellowships listed on Infobytes.' },
+  projects:       { label: 'Projects',       one: 'project',       dir: 'src/content/projects',       type: 'json', public: s => '/projects/' + s + '/', hint: 'The work shown on your portfolio home page.' },
+  certifications: { label: 'Certifications', one: 'certification', dir: 'src/content/certifications', type: 'json', hint: 'Shown under the Certifications tab on your home page.' },
+  pages:          { label: 'Pages',          one: 'page',          dir: 'src/content/pages',          type: 'md',   public: s => '/' + s + '/', hint: 'About, Contact, Privacy, Terms and Disclaimer pages.' },
 };
 const SETTINGS = {
-  'settings.json': 'Portfolio text, links & photo',
-  'site.json': 'Ads, newsletter, Blog & Infobytes',
-  'about.json': 'About section',
-  'services.json': 'Services',
-  'stack.json': 'Tech stack',
+  'settings.json': { label: 'Homepage & profile', hint: 'Your name, headline, photo, menu labels, social links and contact details.' },
+  'about.json':    { label: 'About text',         hint: 'The paragraphs in the About section of your home page.' },
+  'services.json': { label: 'Services',           hint: 'What you offer. Add, remove or reorder services.' },
+  'stack.json':    { label: 'Tools',              hint: 'The tools shown in your stack. Add, remove or reorder.' },
+  'site.json':     { label: 'Blog, Infobytes & ads', hint: 'Titles, share images, newsletter and AdSense.' },
 };
+// Friendly names for fields. Anything not listed gets a readable version of its key.
+const NAMES = {
+  name: 'Full name', short_name: 'Short name', headline: 'Homepage headline', photo: 'Profile photo', logo: 'Logo', favicon: 'Browser tab icon',
+  seo_title: 'Title in Google', seo_description: 'Description in Google', default_og_image: 'Default share image', home_og_image: 'Home page share image', og_image: 'Share image (social media)',
+  whatsapp: 'WhatsApp number', linkedin: 'LinkedIn link', x: 'X (Twitter) link', github: 'GitHub link', cv: 'CV file', cv_title: 'CV heading', cv_button: 'CV button text',
+  cta_title: 'Contact heading', cta_text: 'Contact text', footer: 'Footer text', blog_url: 'Blog link', infobytes_url: 'Infobytes link', contact_email: 'Contact email',
+  adsense_client: 'AdSense publisher ID', ads_enabled: 'Show ads', ad_slot: 'AdSense ad unit ID', newsletter_link: 'Newsletter sign-up page link', newsletter_form_action: 'Newsletter form address',
+  newsletter_email_name: 'Newsletter email field name', newsletter_button: 'Newsletter button text', apply_url: 'Apply link', organization_logo: 'Organisation logo', organization: 'Organisation',
+  image: 'Cover image', date: 'Publish date', deadline: 'Deadline', category: 'Category', title: 'Title', description: 'Short description', tools: 'Tools used', link: 'Link',
+  cover_image: 'Cover image', client_logo: 'Client logo', certificate_image: 'Certificate image', certificate_pdf: 'Certificate PDF', issuer: 'Issued by', issuer_logo: 'Issuer logo', year: 'Year',
+  paragraphs: 'Paragraphs', items: 'Services', tools_list: 'Tools', source: 'Source', source_url: 'Source link', draft: 'Status', updated: 'Last updated',
+};
+const HINTS = {
+  whatsapp: 'Country code and number, no + or spaces. Example: 2348012345678', short_name: 'Shown on small screens, e.g. C.E.O.', headline: 'The big line under your photo.',
+  seo_title: 'Shown in Google results and browser tabs.', seo_description: 'One or two sentences shown under the title in Google.', og_image: 'Shown when the link is shared on WhatsApp, X, LinkedIn…',
+  default_og_image: 'Used when a page has no share image of its own.', adsense_client: 'Starts with ca-pub-', category: 'Pick an existing category or type a new one.',
+  description: 'Shown in lists and in Google. Keep it under 160 characters.', deadline: 'Opportunities past their deadline show as Closed.',
+};
+// Settings fields are grouped into sections by these rules (first match wins).
+const GROUPS = [
+  ['Profile', /^(name|short_name|headline|photo|logo|favicon)$/],
+  ['Contact & social links', /^(whatsapp|linkedin|x|github|contact_email|cta_|cv)/],
+  ['Google & sharing', /(seo_|og_image|_title$|_description$)/],
+  ['Newsletter', /^newsletter/],
+  ['Ads', /^(ads?_|adsense)/],
+  ['Menu & section labels', /^(nav_|tab_|.*_title$|footer)/],
+  ['Links', /_url$/],
+];
 const IMG_KEY = /(image|logo|photo|favicon|avatar|icon|og_)/i;
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -70,19 +115,21 @@ const slugify = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').r
 const fd = d => { if (!d) return ''; const x = new Date(d); return isNaN(x) ? esc(d) : x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const today = () => new Date().toISOString().slice(0, 10);
 const ago = d => { if (!d) return 'never'; const s = (Date.now() - new Date(d)) / 1000; return s < 60 ? 'just now' : s < 3600 ? Math.round(s / 60) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : Math.round(s / 86400) + ' d ago'; };
-let ME = {}; let dirty = false;
+const nice = k => NAMES[k] || (k.startsWith('nav_') ? 'Menu: ' + k.slice(4).replace(/_/g, ' ') : k.startsWith('tab_') ? 'Tab: ' + k.slice(4).replace(/_/g, ' ') : k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()));
+const isDraft = d => d.draft === true || String(d.draft).toLowerCase() === 'true';
+let ME = {}; let dirty = false; let saveFn = null; const CACHE = {};
 
 function toast(msg, er) { const d = document.createElement('div'); d.textContent = msg; if (er) d.className = 'er'; $('#toast').append(d); setTimeout(() => d.remove(), er ? 7000 : 3500); }
-
 async function api(path, opts = {}) {
   const res = await fetch('/administrator/api/' + path, { method: opts.method || 'GET', headers: { 'X-Admin': '1', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined, credentials: 'same-origin' });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && path !== 'login') { renderLogin(); throw new Error('Session expired. Please sign in again.'); }
   if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
+  if (opts.method && opts.method !== 'GET') for (const k in CACHE) delete CACHE[k];
   return data;
 }
-async function busy(btn, fn) { const t = btn?.textContent; if (btn) { btn.disabled = true; btn.textContent = 'Working…'; } try { return await fn(); } catch (e) { toast(e.message, true); } finally { if (btn) { btn.disabled = false; btn.textContent = t; } } }
-
+async function busy(btn, fn) { const t = btn?.innerHTML; if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; } try { return await fn(); } catch (e) { toast(e.message, true); } finally { if (btn) { btn.disabled = false; btn.innerHTML = t; } } }
+function setDirty(v) { dirty = v; const b = $('.savebar'); if (b) { b.classList.toggle('dirty', v); $('.savebar .st span').textContent = v ? 'Unsaved changes' : 'All changes saved'; } }
 /* ---------- Front matter (simple YAML: key: value). Falls back to raw text when it is more complex. ---------- */
 function parseMd(text) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
@@ -118,39 +165,72 @@ function md(src) {
   return h.split(/\n{2,}/).map(p => /^\s*<(h\d|ul|ol|pre|blockquote|img)/.test(p) ? p : '<p>' + p.replace(/\n/g, '<br>') + '</p>').join('');
 }
 
+
+/* ---------- Data helpers ---------- */
+async function loadItems(key, fresh) {
+  const c = COLLECTIONS[key];
+  if (!fresh && CACHE[key]) return CACHE[key];
+  const rows = await api('items?dir=' + c.dir);
+  return CACHE[key] = rows.filter(f => /\.(md|json)$/.test(f.name)).map(f => {
+    let d = {}, body = '';
+    try { if (c.type === 'md') { const p = parseMd(f.content); d = p.fields; body = p.body; if (p.raw) d = Object.fromEntries([...p.raw.matchAll(/^([A-Za-z0-9_]+):\s?(.*)$/gm)].map(m => [m[1], m[2].replace(/^["']|["']$/g, '')])); } else d = JSON.parse(f.content); } catch {}
+    return { f, d, body };
+  });
+}
+const titleOf = (it) => it.d.title || it.d.name || it.f.name.replace(/\.(md|json)$/, '');
+function statusPill(it, key) {
+  if (key === 'posts' || key === 'opportunities') {
+    if (isDraft(it.d)) return `<span class="pill wa">Draft</span>${it.f.by === 'autopost' ? ' <span class="pill ac">Auto</span>' : ''}`;
+    if (key === 'opportunities' && it.d.deadline && new Date(it.d.deadline) < new Date(today())) return '<span class="pill er">Closed</span>';
+    return `<span class="pill ok">Live</span>${it.f.by === 'autopost' ? ' <span class="pill ac">Auto</span>' : ''}`;
+  }
+  return '';
+}
+
 /* ---------- Shell ---------- */
 function renderLogin(msg) {
-  $('#root').innerHTML = `<div class="login card"><h2 style="margin-top:0">Admin sign in</h2>
-    ${ME.configured === false ? '<p class="pill er">Not set up: add the ADMIN_PASSWORD secret to the Worker in Cloudflare.</p>' : ''}
+  $('#root').innerHTML = `<div class="login card"><h2 style="margin-top:0">Sign in</h2><p class="mu" style="margin-top:-6px">Manage your website.</p>
+    ${ME.configured === false ? '<p class="pill er">Not set up yet: add the ADMIN_PASSWORD secret to the Worker in Cloudflare.</p>' : ''}
     <form id="lf"><label>Username</label><input name="username" autocomplete="username" value="admin" required>
     <label>Password</label><input name="password" type="password" autocomplete="current-password" required autofocus>
-    <p id="lerr" style="color:var(--er)">${esc(msg || '')}</p><button class="btn p" style="width:100%">Sign in</button></form></div>`;
+    <p id="lerr" style="color:var(--er)">${esc(msg || '')}</p><button class="btn p" style="width:100%;justify-content:center">Sign in</button></form></div>`;
   $('#lf').onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target); try { await api('login', { method: 'POST', body: Object.fromEntries(f) }); boot(); } catch (er) { $('#lerr').textContent = er.message; } };
 }
 function shell() {
-  const link = (h, t, extra = '') => `<a href="#${h}" data-h="${h}">${t}${extra}</a>`;
+  const link = (h, t, extra = '') => `<a href="#${h}" data-h="${h}"><span>${t}</span>${extra}</a>`;
   $('#root').innerHTML = `<div id="app"><nav id="nav"><h1>The<span>CEO</span> Admin</h1>
-    ${link('dashboard', 'Dashboard')}
-    <div class="grp">Content</div>${Object.entries(COLLECTIONS).map(([k, c]) => link('c/' + k, c.label)).join('')}${link('media', 'Media library')}
-    <div class="grp">Configuration</div>${Object.entries(SETTINGS).map(([f, l]) => link('s/' + f, l)).join('')}
-    <div class="grp">Automation</div>${link('news', 'Auto-posting (hourly)')}
-    <div class="grp">Account</div>${link('activity', 'Activity log')}<a href="/" target="_blank">View site ↗</a><a href="#" id="lo">Sign out</a></nav>
-    <div id="scrim"></div><main><div class="top"><button class="btn" id="mbtn">☰</button><h2 id="title"></h2><div id="actions" style="display:flex;gap:8px;flex-wrap:wrap"></div></div><div id="view"></div></main></div>`;
+    <button class="srch" id="sbtn"><span>Search…</span><kbd>Ctrl K</kbd></button>
+    ${link('dashboard', 'Home')}
+    <div class="grp">Write</div>${link('c/posts', 'Blog posts')}${link('drafts', 'Drafts to review', '<span class="badge" id="nb" hidden></span>')}${link('c/opportunities', 'Opportunities')}
+    <div class="grp">Your website</div>${link('s/settings.json', 'Homepage & profile')}${link('s/about.json', 'About text')}${link('c/projects', 'Projects')}${link('s/services.json', 'Services')}${link('s/stack.json', 'Tools')}${link('c/certifications', 'Certifications')}${link('c/pages', 'Pages')}${link('s/site.json', 'Blog, Infobytes & ads')}${link('media', 'Images & files')}
+    <div class="grp">Automation</div>${link('news', 'Auto-posting')}
+    <div class="grp">Account</div>${link('activity', 'Activity log')}<a href="/" target="_blank"><span>View website ↗</span></a><a href="#" id="lo"><span>Sign out</span></a></nav>
+    <div id="scrim"></div><main><div class="crumb" id="crumb"></div><div class="top"><button class="btn" id="mbtn" aria-label="Menu">☰</button><h2 id="title"></h2><div id="actions" style="display:flex;gap:8px;flex-wrap:wrap"></div></div><div id="view"></div></main></div>`;
   $('#lo').onclick = async e => { e.preventDefault(); await api('logout', { method: 'POST' }).catch(() => {}); renderLogin('Signed out.'); };
   $('#mbtn').onclick = () => $('#nav').classList.toggle('open'); $('#scrim').onclick = () => $('#nav').classList.remove('open');
+  $('#sbtn').onclick = openPalette;
+  refreshDraftBadge();
 }
-function setHead(title, actions = '') { $('#title').textContent = title; $('#actions').innerHTML = actions; document.title = title + ' · Admin'; }
+function setHead(title, actions = '', crumb = '') { $('#title').textContent = title; $('#actions').innerHTML = actions; $('#crumb').innerHTML = crumb; document.title = title + ' · Admin'; }
+async function refreshDraftBadge() { try { const n = (await loadItems('posts')).filter(i => isDraft(i.d)).length; const b = $('#nb'); if (b) { b.textContent = n; b.hidden = !n; } return n; } catch { return 0; } }
+function saveBar(onSave, extra = '') {
+  saveFn = onSave;
+  const bar = document.createElement('div'); bar.className = 'savebar';
+  bar.innerHTML = `<div class="st"><i></i><span>All changes saved</span></div>${extra}<button class="btn p" id="save">Save <span class="mu" style="color:#fff;opacity:.7;font-size:12px">Ctrl S</span></button>`;
+  $('#view').append(bar); $('#save').onclick = e => busy(e.currentTarget, onSave);
+}
 
 async function route() {
-  if (dirty && !confirm('You have unsaved changes. Leave anyway?')) { history.back(); return; }
-  dirty = false;
+  if (dirty && !confirm('You have unsaved changes. Leave without saving?')) { history.back(); return; }
+  setDirty(false); saveFn = null;
   const h = location.hash.slice(1) || 'dashboard';
   document.querySelectorAll('nav a[data-h]').forEach(a => a.classList.toggle('on', h === a.dataset.h || h.startsWith(a.dataset.h + '/')));
   $('#nav')?.classList.remove('open');
-  $('#view').innerHTML = '<p class="mu">Loading…</p>';
+  $('#view').innerHTML = '<p class="mu">Loading…</p>'; scrollTo(0, 0);
   const [a, b, c] = h.split('/');
   try {
     if (a === 'dashboard') return await viewDashboard();
+    if (a === 'drafts') return await viewDrafts();
     if (a === 'c' && c) return await viewEditor(b, decodeURIComponent(c));
     if (a === 'c') return await viewList(b);
     if (a === 's') return await viewSettings(b);
@@ -158,149 +238,254 @@ async function route() {
     if (a === 'news') return await viewNews();
     if (a === 'activity') return await viewActivity();
     $('#view').textContent = 'Not found';
-  } catch (e) { $('#view').innerHTML = `<div class="card"><b>Could not load.</b><p class="mu">${esc(e.message)}</p></div>`; }
+  } catch (e) { $('#view').innerHTML = `<div class="card"><b>Could not load this page.</b><p class="mu">${esc(e.message)}</p><button class="btn" onclick="route()">Try again</button></div>`; }
 }
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && saveFn) { e.preventDefault(); $('#save')?.click(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && ME.user) { e.preventDefault(); openPalette(); }
+  if (e.key === 'Escape') $('#pal').classList.remove('on');
+});
 
-/* ---------- Dashboard ---------- */
+/* ---------- Search (Ctrl/Cmd K) ---------- */
+async function openPalette() {
+  const pal = $('#pal'), q = $('#palq'), ul = $('#pall'); pal.classList.add('on'); q.value = ''; q.focus();
+  const nav = [...document.querySelectorAll('nav a[data-h]')].map(a => ({ t: a.querySelector('span').textContent, s: 'Go to', h: '#' + a.dataset.h }));
+  const acts = Object.entries(COLLECTIONS).map(([k, c]) => ({ t: 'New ' + c.one, s: 'Create', h: `#c/${k}/new` }));
+  let all = [...acts, ...nav]; let sel = 0;
+  const draw = () => {
+    const t = q.value.toLowerCase().trim();
+    const hits = (t ? all.filter(x => (x.t + ' ' + x.s).toLowerCase().includes(t)) : all).slice(0, 40); sel = Math.min(sel, Math.max(0, hits.length - 1));
+    ul.innerHTML = hits.map((x, i) => `<li><a href="${x.h}" class="${i === sel ? 'sel' : ''}">${esc(x.t)}<span>${esc(x.s)}</span></a></li>`).join('') || '<li class="empty">No matches</li>';
+  };
+  draw();
+  Promise.all(Object.keys(COLLECTIONS).map(k => loadItems(k).then(items => items.map(it => ({ t: titleOf(it), s: COLLECTIONS[k].label, h: `#c/${k}/${encodeURIComponent(it.f.name)}` }))).catch(() => []))).then(r => { all = [...acts, ...nav, ...r.flat()]; draw(); });
+  q.oninput = () => { sel = 0; draw(); };
+  q.onkeydown = e => { const n = ul.querySelectorAll('a').length; if (e.key === 'ArrowDown') { sel = (sel + 1) % n; draw(); e.preventDefault(); } if (e.key === 'ArrowUp') { sel = (sel - 1 + n) % n; draw(); e.preventDefault(); } if (e.key === 'Enter') { const a = ul.querySelectorAll('a')[sel]; if (a) { location.hash = a.getAttribute('href'); pal.classList.remove('on'); } } };
+  ul.onclick = () => pal.classList.remove('on'); pal.onclick = e => { if (e.target === pal) pal.classList.remove('on'); };
+}
+
+/* ---------- Home ---------- */
 async function viewDashboard() {
-  setHead('Dashboard', `<a class="btn p" href="#c/posts/new">+ New post</a><a class="btn" href="#c/opportunities/new">+ New opportunity</a>`);
-  const checks = [[ME.configured, 'Admin password set (ADMIN_PASSWORD)'], [ME.db, 'Content database connected (D1)'], [ME.media, 'Media storage connected (R2)'], [ME.kv, 'News storage connected (KV)']];
-  $('#view').innerHTML = `<div class="grid" id="stats">${Object.entries(COLLECTIONS).map(([k, c]) => `<a class="card stat" href="#c/${k}" style="text-decoration:none;color:inherit"><b id="n-${k}">…</b><span>${c.label}</span></a>`).join('')}<a class="card stat" href="#news" style="text-decoration:none;color:inherit"><b id="n-news">…</b><span>Auto-posts (recent)</span></a></div>
-    <div class="row2"><div class="card"><h3 style="margin-top:0">Setup</h3><ul class="chk">${checks.map(([ok, t]) => `<li>${ok ? '✅' : '⚠️'} ${t}</li>`).join('')}</ul><p class="mu">Content is stored in Cloudflare D1, and changes are saved instantly.</p></div>
-    <div class="card"><h3 style="margin-top:0">Recent changes</h3><div id="rc" class="mu">Loading…</div></div></div>`;
-  Object.entries(COLLECTIONS).forEach(([k, c]) => api('list?dir=' + c.dir).then(l => $('#n-' + k).textContent = l.filter(f => f.type === 'file').length).catch(() => $('#n-' + k).textContent = '–'));
-  api('news/status').then(s => $('#n-news').textContent = (s.runs || []).reduce((a, r) => a + (r.posts || []).filter(x => x.created).length, 0)).catch(() => $('#n-news').textContent = '–');
-  api('commits').then(cs => $('#rc').innerHTML = cs.length === 0 ? 'No changes yet. Edits you make here will show up in this list.' : cs.slice(0, 6).map(c => `<div style="margin-bottom:8px"><b style="color:var(--tx)">${esc(c.message)}</b><br>${esc(c.author)} · ${ago(c.date)}</div>`).join('')).catch(e => $('#rc').textContent = e.message);
+  setHead('Welcome back');
+  const missing = [[ME.configured, 'Admin password (ADMIN_PASSWORD)'], [ME.db, 'Content database (D1)'], [ME.media, 'Image storage (R2)'], [ME.kv, 'Auto-posting storage (KV)']].filter(([ok]) => !ok);
+  const tasks = [
+    ['✎', 'Write a blog post', 'Start a new article', '#c/posts/new'],
+    ['＋', 'Add an opportunity', 'Scholarship, job, grant…', '#c/opportunities/new'],
+    ['✓', 'Review drafts', '<span id="dn">…</span> waiting', '#drafts'],
+    ['◐', 'Edit homepage', 'Headline, photo, links', '#s/settings.json'],
+    ['▦', 'Add a project', 'Show new work', '#c/projects/new'],
+    ['⇪', 'Upload images', 'Images & files', '#media'],
+  ];
+  $('#view').innerHTML = `<p class="sub">What would you like to do?</p>
+    <div class="grid" style="margin-bottom:22px">${tasks.map(([i, t, s, h]) => `<a class="task" href="${h}"><i>${i}</i><b>${t}</b><span>${s}</span></a>`).join('')}</div>
+    ${missing.length ? `<div class="card" style="border-color:var(--wa)"><h3>Finish setup</h3><p class="mu" style="margin:0">These are not connected yet:</p><ul class="chk">${missing.map(([, t]) => `<li>${t}</li>`).join('')}</ul></div>` : ''}
+    <div class="row2" style="gap:16px"><div class="card"><h3>Your content</h3><table id="counts"><tr><td class="mu">Loading…</td></tr></table></div>
+    <div class="card"><h3>Recent changes</h3><div id="rc" class="mu">Loading…</div><p style="margin:10px 0 0"><a href="#activity">See all activity →</a></p></div></div>`;
+  refreshDraftBadge().then(n => { const e = $('#dn'); if (e) e.textContent = n; });
+  Promise.all(Object.entries(COLLECTIONS).map(([k, c]) => loadItems(k).then(l => `<tr class="row" onclick="location.hash='c/${k}'"><td>${c.label}</td><td style="text-align:right"><b>${l.length}</b></td></tr>`).catch(() => ''))).then(r => { const t = $('#counts'); if (t) t.innerHTML = r.join(''); });
+  api('commits').then(cs => { const e = $('#rc'); if (e) e.innerHTML = cs.length === 0 ? 'No changes yet.' : cs.slice(0, 5).map(c => `<div style="margin-bottom:8px"><span style="color:var(--tx)">${esc(c.message)}</span><br>${esc(c.author)} · ${ago(c.date)}</div>`).join(''); }).catch(e => $('#rc').textContent = e.message);
 }
 
 async function viewActivity() {
-  setHead('Activity log');
+  setHead('Activity log', '', '<a href="#dashboard">Home</a> /');
   const cs = await api('commits');
-  $('#view').innerHTML = `<div class="card"><table class="resp"><tr><th>Change</th><th>By</th><th>When</th><th>#</th></tr>${cs.map(c => `<tr><td>${esc(c.message)}</td><td>${esc(c.author)}</td><td>${ago(c.date)}</td><td class="mu">${esc(c.sha)}</td></tr>`).join('')}</table></div>`;
+  $('#view').innerHTML = `<div class="card"><table class="resp"><tr><th>Change</th><th>By</th><th>When</th></tr>${cs.map(c => `<tr><td>${esc(c.message)}</td><td>${esc(c.author)}</td><td class="mu">${ago(c.date)}</td></tr>`).join('') || '<tr><td class="empty">No changes yet.</td></tr>'}</table></div>`;
 }
 
-/* ---------- Collections ---------- */
-async function loadItems(key) {
-  const c = COLLECTIONS[key];
-  const files = (await api('list?dir=' + c.dir)).filter(f => f.type === 'file' && /\.(md|json)$/.test(f.name));
-  const out = await Promise.all(files.map(async f => {
-    try { const r = await api('file?path=' + encodeURIComponent(f.path)); const d = c.type === 'md' ? parseMd(r.content).fields : JSON.parse(r.content); return { f, d }; } catch { return { f, d: {} }; }
-  }));
-  return out;
+/* ---------- Drafts review ---------- */
+async function viewDrafts() {
+  setHead('Drafts to review', '', '<a href="#dashboard">Home</a> /');
+  const items = (await loadItems('posts', true)).filter(i => isDraft(i.d)).sort((a, b) => String(b.d.date).localeCompare(String(a.d.date)));
+  if (!items.length) { $('#view').innerHTML = '<div class="card empty"><b style="color:var(--tx)">All caught up.</b><br>New auto-posts will appear here for you to review.</div>'; return; }
+  $('#view').innerHTML = `<p class="sub">Read each draft, then publish it or delete it. Drafts are not visible on your site.</p>` + items.map((it, i) => `<div class="card" id="d${i}">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start"><div><span class="pill">${esc(it.d.category || '')}</span> ${it.f.by === 'autopost' ? '<span class="pill ac">Auto</span>' : ''}<h3 style="font-size:17px;margin-top:8px">${esc(titleOf(it))}</h3><p class="mu" style="margin:4px 0 0">${esc(it.d.description || '')}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-x="read">Read</button><a class="btn sm" href="#c/posts/${encodeURIComponent(it.f.name)}">Edit</a><button class="btn sm d" data-x="del">Delete</button><button class="btn sm p" data-x="pub">Publish</button></div></div>
+      <div class="pv" style="display:none;margin-top:12px;max-height:none">${md(it.body)}</div></div>`).join('');
+  items.forEach((it, i) => {
+    const card = $('#d' + i);
+    card.querySelector('[data-x=read]').onclick = e => { const p = card.querySelector('.pv'); const on = p.style.display === 'none'; p.style.display = on ? 'block' : 'none'; e.target.textContent = on ? 'Hide' : 'Read'; };
+    card.querySelector('[data-x=pub]').onclick = e => busy(e.currentTarget, async () => {
+      const content = it.f.content.replace(/^draft:\s*(true|"true"|'true')\s*$/m, 'draft: false');
+      await api('file', { method: 'PUT', body: { path: it.f.path, sha: it.f.sha, content } }); toast('Published. It is live on your blog now.'); card.remove(); refreshDraftBadge();
+      if (!document.querySelector('#view .card')) viewDrafts();
+    });
+    card.querySelector('[data-x=del]').onclick = e => { if (confirm('Delete this draft?')) busy(e.currentTarget, async () => { await api('file', { method: 'DELETE', body: { path: it.f.path, sha: it.f.sha } }); toast('Draft deleted.'); card.remove(); refreshDraftBadge(); }); };
+  });
 }
+
+/* ---------- Lists ---------- */
 async function viewList(key) {
   const c = COLLECTIONS[key];
-  setHead(c.label, `<a class="btn p" href="#c/${key}/new">+ New</a>`);
-  const items = await loadItems(key);
-  const cols = ['category', 'date', 'deadline', 'type'].filter(k => items.some(i => i.d[k]));
-  items.sort((a, b) => String(b.d.date || b.d.deadline || '').localeCompare(String(a.d.date || a.d.deadline || '')));
-  $('#view').innerHTML = `<div class="card"><input id="flt" placeholder="Search ${c.label.toLowerCase()}…" style="margin-bottom:10px"><table class="resp"><thead><tr><th>Title</th>${cols.map(k => `<th>${k}</th>`).join('')}</tr></thead><tbody>${items.map(({ f, d }) => `<tr class="row" data-p="${esc(f.name)}"><td><b>${esc(d.title || d.name || f.name)}</b></td>${cols.map(k => `<td class="mu">${k === 'deadline' && d[k] && new Date(d[k]) < new Date() ? `<span class="pill er">Closed ${fd(d[k])}</span>` : /date|deadline/.test(k) ? fd(d[k]) : k === 'category' && d[k] ? `<span class="pill">${esc(d[k])}</span>` : esc(d[k] || '')}</td>`).join('')}</tr>`).join('') || '<tr><td class="mu">Nothing here yet.</td></tr>'}</tbody></table></div>`;
+  setHead(c.label, `<a class="btn p" href="#c/${key}/new">+ New ${c.one}</a>`, '<a href="#dashboard">Home</a> /');
+  const items = await loadItems(key, true);
+  const sortKey = it => String(it.d.date || it.d.deadline || it.d.year || it.f.updated || '');
+  items.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+  const cats = [...new Set(items.map(i => i.d.category).filter(Boolean))];
+  const hasStatus = key === 'posts' || key === 'opportunities';
+  const second = items.some(i => i.d.date) ? 'date' : items.some(i => i.d.deadline) ? 'deadline' : items.some(i => i.d.year) ? 'year' : null;
+  $('#view').innerHTML = `<p class="sub">${c.hint}</p><div class="card">
+    <input id="flt" placeholder="Search ${c.label.toLowerCase()}…" style="margin-bottom:12px">
+    ${cats.length > 1 || hasStatus ? `<div class="tabs" id="tb"><button aria-pressed="true" data-f="">All (${items.length})</button>${hasStatus ? `<button aria-pressed="false" data-f="s:draft">Drafts</button><button aria-pressed="false" data-f="s:live">Live</button>` : ''}${cats.map(x => `<button aria-pressed="false" data-f="c:${esc(x)}">${esc(x)}</button>`).join('')}</div>` : ''}
+    <table class="resp"><thead><tr><th>Title</th>${cats.length ? '<th>Category</th>' : ''}${second ? `<th>${nice(second)}</th>` : ''}${hasStatus ? '<th>Status</th>' : ''}<th></th></tr></thead><tbody>
+    ${items.map(it => `<tr class="row" data-p="${esc(it.f.name)}" data-c="${esc(it.d.category || '')}" data-s="${isDraft(it.d) ? 'draft' : 'live'}"><td><b>${esc(titleOf(it))}</b></td>${cats.length ? `<td>${it.d.category ? `<span class="pill">${esc(it.d.category)}</span>` : ''}</td>` : ''}${second ? `<td class="mu">${second === 'year' ? esc(it.d.year || '') : fd(it.d[second])}</td>` : ''}${hasStatus ? `<td>${statusPill(it, key)}</td>` : ''}<td style="text-align:right"><span class="mu">Edit →</span></td></tr>`).join('') || `<tr><td class="empty">Nothing here yet. <a href="#c/${key}/new">Create the first ${c.one}</a>.</td></tr>`}
+    </tbody></table></div>`;
   document.querySelectorAll('tr.row').forEach(r => r.onclick = () => location.hash = 'c/' + key + '/' + encodeURIComponent(r.dataset.p));
-  $('#flt').oninput = e => { const q = e.target.value.toLowerCase(); document.querySelectorAll('tr.row').forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'); };
+  let F = '', Q = '';
+  const apply = () => document.querySelectorAll('tr.row').forEach(r => { const okF = !F || (F.startsWith('s:') ? r.dataset.s === F.slice(2) : r.dataset.c === F.slice(2)); r.style.display = okF && r.textContent.toLowerCase().includes(Q) ? '' : 'none'; });
+  $('#flt').oninput = e => { Q = e.target.value.toLowerCase(); apply(); };
+  $('#tb') && ($('#tb').onclick = e => { const b = e.target.closest('button'); if (!b) return; F = b.dataset.f; $('#tb').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); apply(); });
 }
 
-function fieldInput(k, v, big) {
+/* ---------- Fields ---------- */
+function fieldInput(k, v, opts = {}) {
   const id = 'f_' + k;
-  if (IMG_KEY.test(k)) return `<div class="imgf">${v ? `<img src="${esc(v)}" alt="">` : ''}<input id="${id}" data-k="${k}" value="${esc(v)}"><button class="btn" type="button" data-up="${id}">Upload</button></div>`;
-  if (/date|deadline/i.test(k) && /^\d{4}-\d{2}-\d{2}/.test(v || '2000-01-01')) return `<input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}">`;
-  if (typeof v === 'boolean' || v === 'true' || v === 'false') return `<select id="${id}" data-k="${k}" data-bool="1"><option value="true" ${String(v) === 'true' ? 'selected' : ''}>Yes</option><option value="false" ${String(v) !== 'true' ? 'selected' : ''}>No</option></select>`;
+  if (opts.list) return `<input id="${id}" data-k="${k}" value="${esc(v)}" list="dl_${k}"><datalist id="dl_${k}">${opts.list.map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
+  if (IMG_KEY.test(k) || /pdf|^cv$/.test(k)) return `<div class="imgf">${v && IMG_KEY.test(k) ? `<img src="${esc(v)}" alt="">` : ''}<input id="${id}" data-k="${k}" value="${esc(v)}" placeholder="/uploads/…"><button class="btn" type="button" data-up="${id}">Upload</button></div>`;
+  if (/date|deadline/i.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v || '2000-01-01'))) return `<input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}">`;
+  if (typeof v === 'boolean' || /^(true|false)$/i.test(String(v))) return `<select id="${id}" data-k="${k}" data-bool="${typeof v === 'boolean' ? 'native' : 'str'}"><option value="true" ${String(v).toLowerCase() === 'true' ? 'selected' : ''}>Yes</option><option value="false" ${String(v).toLowerCase() !== 'true' ? 'selected' : ''}>No</option></select>`;
+  if (Array.isArray(v)) return listEditor(k, v);
   if (v !== null && typeof v === 'object') return `<textarea class="code" id="${id}" data-k="${k}" data-json="1" rows="8">${esc(JSON.stringify(v, null, 2))}</textarea>`;
   if (typeof v === 'number') return `<input id="${id}" data-k="${k}" data-num="1" type="number" value="${v}">`;
-  if (big || String(v || '').length > 90) return `<textarea id="${id}" data-k="${k}">${esc(v)}</textarea>`;
+  if (opts.big || String(v || '').length > 90) return `<textarea id="${id}" data-k="${k}">${esc(v)}</textarea>`;
   return `<input id="${id}" data-k="${k}" value="${esc(v)}">`;
 }
-const label = k => k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+const fieldBlock = (k, v, opts = {}) => `<div class="fld ${opts.full || Array.isArray(v) || /desc|text|paragraph/i.test(k) || String(v || '').length > 90 ? 'full' : ''}" data-name="${esc(k + ' ' + nice(k))}"><label>${esc(nice(k))}${HINTS[k] ? `<span class="hint">${HINTS[k]}</span>` : ''}</label>${fieldInput(k, v, opts)}</div>`;
+
+// Repeatable list editor: arrays of text (paragraphs, tags) or of objects (services, tools).
+function listEditor(k, arr) {
+  const objs = arr.some(x => x && typeof x === 'object');
+  const keys = objs ? [...new Set(arr.flatMap(x => Object.keys(x || {})))] : [];
+  const item = (x, i) => objs
+    ? `<div class="li"><div class="li-h"><b>${i + 1}. ${esc(x?.title || x?.name || '')}</b><span><button class="btn sm" type="button" data-mv="-1" title="Move up">↑</button><button class="btn sm" type="button" data-mv="1" title="Move down">↓</button><button class="btn sm d" type="button" data-rm>Remove</button></span></div><div class="row2">${keys.map(f => `<div class="${/text|desc/.test(f) ? 'full' : ''}"><label>${esc(nice(f))}</label>${/color/.test(f) ? `<div class="imgf"><input type="color" data-sub="${f}" value="${esc(x?.[f] || '#0f9f8f')}" style="width:52px;padding:2px"><input data-sub2="${f}" value="${esc(x?.[f] || '')}" oninput="this.previousElementSibling.value=this.value"></div>` : /text|desc/.test(f) ? `<textarea data-sub="${f}">${esc(x?.[f] || '')}</textarea>` : `<input data-sub="${f}" value="${esc(x?.[f] || '')}">`}</div>`).join('')}</div></div>`
+    : `<div class="li" style="padding-top:10px"><div style="display:flex;gap:8px;align-items:start"><textarea data-sub="" style="min-height:${String(x).length > 60 ? 90 : 42}px">${esc(x)}</textarea><span style="display:flex;flex-direction:column;gap:4px"><button class="btn sm" type="button" data-mv="-1">↑</button><button class="btn sm" type="button" data-mv="1">↓</button><button class="btn sm d" type="button" data-rm>✕</button></span></div></div>`;
+  setTimeout(() => {
+    const box = document.getElementById('le_' + k); if (!box || box.dataset.wired) return; box.dataset.wired = 1;
+    box.onclick = e => {
+      const li = e.target.closest('.li'); const items = () => [...box.querySelectorAll(':scope>.items>.li')];
+      if (e.target.closest('[data-rm]')) { if (confirm('Remove this item?')) { li.remove(); setDirty(true); } }
+      else if (e.target.closest('[data-mv]')) { const d = +e.target.closest('[data-mv]').dataset.mv, all = items(), i = all.indexOf(li), j = i + d; if (j >= 0 && j < all.length) { d < 0 ? all[j].before(li) : all[j].after(li); setDirty(true); } }
+      else if (e.target.closest('[data-add]')) { const t = document.createElement('div'); t.innerHTML = item(objs ? {} : '', items().length); box.querySelector('.items').append(t.firstElementChild); setDirty(true); }
+    };
+    box.addEventListener('input', e => { if (e.target.type === 'color') e.target.nextElementSibling.value = e.target.value; });
+  });
+  return `<div id="le_${k}" data-k="${k}" data-list="${objs ? 'obj' : 'str'}"><div class="items">${arr.map(item).join('')}</div><button class="btn" type="button" data-add>+ Add ${objs ? 'item' : 'line'}</button></div>`;
+}
 function readFields(scope) {
   const out = {};
   scope.querySelectorAll('[data-k]').forEach(el => {
-    let v = el.value;
-    if (el.dataset.json) { try { v = JSON.parse(v); } catch { throw new Error('"' + el.dataset.k + '" is not valid JSON.'); } }
-    else if (el.dataset.num) v = Number(v);
-    else if (el.dataset.bool && el.dataset.native) v = v === 'true';
+    if (el.closest('[data-list]') && el.closest('[data-list]') !== el) return;
+    let v;
+    if (el.dataset.list) {
+      const lis = el.querySelectorAll(':scope>.items>.li');
+      v = [...lis].map(li => { if (el.dataset.list === 'str') return li.querySelector('[data-sub]').value; const o = {}; li.querySelectorAll('[data-sub],[data-sub2]').forEach(i => { if (i.type === 'color') return; const f = i.dataset.sub ?? i.dataset.sub2; if (i.value !== '') o[f] = i.value; }); return o; })
+        .filter(x => typeof x === 'string' ? x.trim() : Object.keys(x).length);
+    } else {
+      v = el.value;
+      if (el.dataset.json) { try { v = JSON.parse(v); } catch { throw new Error('"' + nice(el.dataset.k) + '" has a formatting error.'); } }
+      else if (el.dataset.num) v = Number(v);
+      else if (el.dataset.bool === 'native') v = v === 'true';
+    }
     out[el.dataset.k] = v;
   });
   return out;
 }
 function wireUploads(scope) {
-  scope.querySelectorAll('[data-up]').forEach(b => b.onclick = () => pickUpload(url => { const i = $('#' + b.dataset.up); i.value = url; i.dispatchEvent(new Event('input', { bubbles: true })); }));
-  scope.addEventListener('input', () => dirty = true);
+  scope.querySelectorAll('[data-up]').forEach(b => b.onclick = () => pickUpload(url => { const i = $('#' + b.dataset.up); i.value = url; i.dispatchEvent(new Event('input', { bubbles: true })); const img = i.previousElementSibling; if (img?.tagName === 'IMG') img.src = url; else if (IMG_KEY.test(i.dataset.k)) i.insertAdjacentHTML('beforebegin', `<img src="${esc(url)}" alt="">`); }));
+  scope.addEventListener('input', () => setDirty(true));
 }
 
 async function template(key) {
-  // New items copy the field names of an existing item, so every collection gets the right fields.
   const items = await loadItems(key).catch(() => []);
-  const sample = items[0]?.d || {};
+  const sample = items.find(i => !isDraft(i.d))?.d || items[0]?.d || {};
   const f = {};
-  for (const k of Object.keys(sample)) f[k] = typeof sample[k] === 'object' && sample[k] !== null ? (Array.isArray(sample[k]) ? [] : {}) : typeof sample[k] === 'number' ? 0 : typeof sample[k] === 'boolean' ? false : '';
-  f.title = f.title ?? ''; if ('date' in f || key === 'posts') f.date = today();
+  for (const k of Object.keys(sample)) { if (['source', 'source_url', 'draft'].includes(k)) continue; f[k] = Array.isArray(sample[k]) ? [] : sample[k] && typeof sample[k] === 'object' ? {} : typeof sample[k] === 'number' ? 0 : typeof sample[k] === 'boolean' ? false : ''; }
+  if (!('title' in f) && !('name' in f)) f.title = '';
+  if ('date' in f || key === 'posts') f.date = today();
   return f;
 }
 
+/* ---------- Editor ---------- */
 async function viewEditor(key, name) {
   const c = COLLECTIONS[key];
   const isNew = name === 'new';
   let data, sha = null, path = null, body = '', raw = null;
-  if (isNew) { data = await template(key); }
+  if (isNew) data = await template(key);
   else {
     path = c.dir + '/' + name;
     const r = await api('file?path=' + encodeURIComponent(path)); sha = r.sha;
     if (c.type === 'md') { const p = parseMd(r.content); data = p.fields; body = p.body; raw = p.raw; } else data = JSON.parse(r.content);
   }
   const slug = name.replace(/\.(md|json)$/, '');
-  setHead(isNew ? 'New ' + c.label.replace(/s$/, '').toLowerCase() : (data.title || data.name || name),
-    `${!isNew && c.public ? `<a class="btn" target="_blank" href="${c.public(slug)}">View live ↗</a>` : ''}${!isNew ? '<button class="btn d" id="del">Delete</button>' : ''}<button class="btn p" id="save">${isNew ? 'Publish' : 'Save'}</button>`);
-  const keys = Object.keys(data);
-  $('#view').innerHTML = `<div class="card" id="fm">
-      ${isNew ? `<label>File name (URL slug) <small>made from the title, you can change it</small></label><input id="slug" placeholder="my-new-post">` : ''}
-      ${raw != null ? `<label>Front matter <small>(advanced YAML)</small></label><textarea class="code" id="raw" rows="10">${esc(raw)}</textarea>` : `<div class="row2">${keys.map(k => `<div style="${/desc|summary|excerpt|text|body/i.test(k) || typeof data[k] === 'object' ? 'grid-column:1/-1' : ''}"><label>${label(k)}</label>${fieldInput(k, data[k], /desc|summary|excerpt|text/i.test(k))}</div>`).join('')}</div>
-      <details style="margin-top:14px"><summary class="mu" style="cursor:pointer">+ Add a field</summary><div style="display:flex;gap:8px;margin-top:8px"><input id="nk" placeholder="field_name"><button class="btn" id="addk" type="button">Add</button></div></details>`}
+  const hasStatus = c.type === 'md' && key !== 'pages';
+  let draft = hasStatus && (isNew ? key === 'posts' ? false : false : isDraft(data));
+  const cats = data.category !== undefined ? [...new Set((await loadItems(key).catch(() => [])).map(i => i.d.category).filter(Boolean))] : null;
+  setHead(isNew ? 'New ' + c.one : (data.title || data.name || name),
+    `${!isNew && c.public ? `<a class="btn" target="_blank" href="${c.public(slug)}">View on site ↗</a>` : ''}${!isNew ? '<button class="btn d" id="del">Delete</button>' : ''}`,
+    `<a href="#c/${key}">← ${c.label}</a>`);
+  const main = ['title', 'name', 'category', 'description', 'date', 'deadline', 'organization', 'location', 'type', 'apply_url', 'image', 'cover_image', 'issuer', 'year', 'link', 'tools'];
+  const keys = Object.keys(data).filter(k => k !== 'draft');
+  const first = keys.filter(k => main.includes(k)).sort((a, b) => main.indexOf(a) - main.indexOf(b)), rest = keys.filter(k => !main.includes(k));
+  $('#view').innerHTML = `
+    ${hasStatus ? `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h3>Status</h3><span class="mu">Drafts are hidden from your site.</span></div><div class="status" id="stt"><button type="button" data-v="draft" aria-pressed="${draft}">Draft</button><button type="button" data-v="live" aria-pressed="${!draft}">Published</button></div></div>` : ''}
+    <div class="card" id="fm">
+      ${raw != null ? `<label>Details <span class="hint">This item uses advanced formatting, so its details are shown as text.</span></label><textarea class="code" id="raw" rows="10">${esc(raw)}</textarea>` : `
+      <div class="row2">${first.map(k => fieldBlock(k, data[k], { list: k === 'category' ? cats : null, big: /desc/.test(k) })).join('')}</div>
+      ${rest.length ? `<details class="sect" style="margin-top:14px"><summary class="mu"><b style="color:var(--tx)">More options</b></summary><div class="row2">${rest.map(k => fieldBlock(k, data[k])).join('')}</div></details>` : ''}`}
+      ${isNew ? `<details class="sect" style="margin-top:10px"><summary class="mu">Web address: <span id="slugv" class="mu"></span></summary><label>Web address (slug) <span class="hint">Made from the title. Only change it if you need to.</span></label><input id="slug" placeholder="my-new-post"></details>` : ''}
     </div>
-    ${c.type === 'md' ? `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>Content</b><span style="display:flex;gap:8px"><button class="btn" type="button" id="pvt" style="display:none">Preview</button><button class="btn" type="button" id="ins">Insert image</button></span></div>
-      <div class="ed" style="margin-top:10px"><textarea class="code" id="body" style="min-height:560px">${esc(body)}</textarea><div class="pv ar" id="pv"></div></div></div>` : ''}`;
+    ${c.type === 'md' ? `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><h3>Content</h3><span class="mu" style="font-size:12.5px">Markdown: **bold**, *italic*, ## heading, - list, [link](https://…)</span></div><span style="display:flex;gap:8px"><button class="btn" type="button" id="pvt" style="display:none">Preview</button><button class="btn" type="button" id="ins">Insert image</button></span></div>
+      <div class="ed" style="margin-top:10px"><textarea class="code" id="body" style="min-height:520px">${esc(body)}</textarea><div class="pv ar" id="pv"></div></div></div>` : ''}`;
   wireUploads($('#view'));
-  if (isNew) { const t = $('#f_title'); const s = $('#slug'); let touched = false; s.oninput = () => touched = true; t && (t.oninput = () => { if (!touched) s.value = slugify(t.value); }); }
+  $('#stt') && ($('#stt').onclick = e => { const b = e.target.closest('button'); if (!b) return; draft = b.dataset.v === 'draft'; $('#stt').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); setDirty(true); });
+  if (isNew) { const t = $('#f_title') || $('#f_name'); const s = $('#slug'); let touched = false; const sync = () => $('#slugv').textContent = s.value ? (c.public ? c.public(s.value) : s.value) : '(from title)'; s.oninput = () => { touched = true; sync(); }; t && t.addEventListener('input', () => { if (!touched) { s.value = slugify(t.value); sync(); } }); sync(); t?.focus(); }
   const bodyEl = $('#body');
-  if (bodyEl) { const up = () => $('#pv').innerHTML = md(bodyEl.value); bodyEl.oninput = () => { dirty = true; up(); }; up();
+  if (bodyEl) { const up = () => $('#pv').innerHTML = md(bodyEl.value); bodyEl.oninput = () => { setDirty(true); up(); }; up();
     $('#pvt').onclick = () => { const e = $('.ed'); e.classList.toggle('show-pv'); $('#pvt').textContent = e.classList.contains('show-pv') ? 'Write' : 'Preview'; };
     $('#ins').onclick = () => pickUpload(url => { const at = bodyEl.selectionStart; bodyEl.setRangeText(`\n![](${url})\n`, at, at, 'end'); bodyEl.oninput(); }); }
-  $('#addk') && ($('#addk').onclick = () => { const k = slugify($('#nk').value).replace(/-/g, '_'); if (!k) return; const d = document.createElement('div'); d.innerHTML = `<label>${label(k)}</label>${fieldInput(k, '')}`; $('#fm .row2').append(d); $('#nk').value = ''; });
 
-  $('#save').onclick = e => busy(e.target, async () => {
+  saveBar(async () => {
     let content;
-    if (c.type === 'md') { const f = raw != null ? null : readFields($('#fm')); content = buildMd(f, bodyEl.value, raw != null ? $('#raw').value : null); }
-    else content = JSON.stringify(readFields($('#fm')), null, 2) + '\n';
+    if (c.type === 'md') {
+      if (raw != null) { let r = $('#raw').value; if (hasStatus) r = /^draft:/m.test(r) ? r.replace(/^draft:.*$/m, 'draft: ' + draft) : r + '\ndraft: ' + draft; content = buildMd(null, bodyEl.value, r); }
+      else { const f = readFields($('#fm')); if (hasStatus && (draft || 'draft' in data)) f.draft = String(draft); content = buildMd(f, bodyEl.value, null); }
+    } else content = JSON.stringify(readFields($('#fm')), null, 2) + '\n';
     let p = path;
-    if (isNew) { const s = slugify($('#slug').value || $('#f_title')?.value); if (!s) throw new Error('Add a title or file name first.'); p = c.dir + '/' + s + '.' + c.type; }
+    if (isNew) { const s = slugify($('#slug').value || ($('#f_title') || $('#f_name'))?.value); if (!s) throw new Error('Add a title first.'); p = c.dir + '/' + s + '.' + c.type; }
     const r = await api('file', { method: 'PUT', body: { path: p, content, sha, message: (isNew ? 'Create ' : 'Update ') + key + ' “' + p.split('/').pop() + '”' } });
-    dirty = false; toast('Saved.');
-    if (isNew) location.hash = 'c/' + key + '/' + encodeURIComponent(r.path.split('/').pop()); else { sha = r.sha; }
+    setDirty(false); toast(hasStatus && draft ? 'Saved as draft.' : 'Saved. Live on your site now.'); refreshDraftBadge();
+    if (isNew) { dirty = false; location.hash = 'c/' + key + '/' + encodeURIComponent(r.path.split('/').pop()); } else sha = r.sha;
   });
-  $('#del') && ($('#del').onclick = e => { if (!confirm('Delete this permanently?')) return; busy(e.target, async () => { await api('file', { method: 'DELETE', body: { path, sha } }); dirty = false; toast('Deleted.'); location.hash = 'c/' + key; }); });
+  $('#del') && ($('#del').onclick = e => { if (!confirm(`Delete this ${c.one} permanently?`)) return; busy(e.currentTarget, async () => { await api('file', { method: 'DELETE', body: { path, sha } }); setDirty(false); toast('Deleted.'); location.hash = 'c/' + key; }); });
 }
 
-/* ---------- Settings (single JSON files) ---------- */
+/* ---------- Settings ---------- */
 async function viewSettings(file) {
-  const path = 'src/content/' + file;
+  const path = 'src/content/' + file, meta = SETTINGS[file] || { label: file, hint: '' };
   const r = await api('file?path=' + encodeURIComponent(path));
   let data = JSON.parse(r.content); let sha = r.sha;
   const isArr = Array.isArray(data);
-  setHead(SETTINGS[file] || file, `<button class="btn" id="mode">Edit as JSON</button><button class="btn p" id="save">Save</button>`);
+  setHead(meta.label, `<button class="btn" id="mode">Advanced (JSON)</button>`, '<a href="#dashboard">Home</a> /');
   const wrapped = isArr ? { items: data } : data;
-  const form = () => `<div class="card" id="fm"><input id="flt" placeholder="Filter settings…" style="margin-bottom:6px"><div class="row2">${Object.keys(wrapped).map(k => `<div class="fld" data-name="${esc(k)}" style="${typeof wrapped[k] === 'object' || String(wrapped[k]).length > 90 ? 'grid-column:1/-1' : ''}"><label>${label(k)} <small>${esc(k)}</small></label>${fieldInput(k, wrapped[k])}</div>`).join('')}</div></div>`;
   let jsonMode = false;
+  const form = () => {
+    const keys = Object.keys(wrapped), used = new Set(), secs = [];
+    for (const [name, re] of GROUPS) { const ks = keys.filter(k => !used.has(k) && re.test(k)); ks.forEach(k => used.add(k)); if (ks.length) secs.push([name, ks]); }
+    const left = keys.filter(k => !used.has(k)); if (left.length) secs.unshift([keys.length === left.length ? '' : 'General', left]);
+    return `<p class="sub">${meta.hint}</p>${keys.length > 6 ? `<input id="flt" placeholder="Find a setting…" style="margin-bottom:14px">` : ''}<div id="fm">${secs.map(([n, ks], i) => n ? `<details class="card sect" ${i < 2 ? 'open' : ''}><summary><h3>${n}</h3></summary><div class="row2">${ks.map(k => fieldBlock(k, wrapped[k])).join('')}</div></details>` : `<div class="card"><div class="row2">${ks.map(k => fieldBlock(k, wrapped[k], { full: true })).join('')}</div></div>`).join('')}</div>`;
+  };
   const draw = () => {
-    $('#view').innerHTML = jsonMode ? `<div class="card"><textarea class="code" id="js" style="min-height:70vh">${esc(JSON.stringify(data, null, 2))}</textarea></div>` : form();
-    if (!jsonMode) { wireUploads($('#view')); $('#flt').oninput = e => { const q = e.target.value.toLowerCase(); document.querySelectorAll('.fld').forEach(f => f.style.display = f.textContent.toLowerCase().includes(q) || f.dataset.name.includes(q) ? '' : 'none'); }; document.querySelectorAll('select[data-bool]').forEach(s => s.dataset.native = typeof wrapped[s.dataset.k] === 'boolean' ? '1' : ''); }
-    else $('#js').oninput = () => dirty = true;
+    $('#view').innerHTML = jsonMode ? `<p class="sub">Advanced: edit the raw data. Only use this if you know JSON.</p><div class="card"><textarea class="code" id="js" style="min-height:65vh">${esc(JSON.stringify(data, null, 2))}</textarea></div>` : form();
+    if (!jsonMode) { wireUploads($('#view')); $('#flt') && ($('#flt').oninput = e => { const q = e.target.value.toLowerCase(); document.querySelectorAll('.fld').forEach(f => f.style.display = !q || f.dataset.name.toLowerCase().includes(q) ? '' : 'none'); if (q) document.querySelectorAll('details.sect').forEach(d => d.open = true); }); }
+    else $('#js').oninput = () => setDirty(true);
+    saveBar(async () => {
+      if (jsonMode) { try { data = JSON.parse($('#js').value); } catch { throw new Error('The JSON has a formatting error.'); } } else { const f = readFields($('#fm')); data = isArr ? f.items : f; }
+      const res = await api('file', { method: 'PUT', body: { path, sha, content: JSON.stringify(data, null, 2) + '\n', message: 'Update “' + meta.label + '”' } });
+      sha = res.sha; setDirty(false); toast('Saved. Live on your site now.');
+    });
   };
   draw();
-  $('#mode').onclick = () => { try { if (!jsonMode) { const f = readFields($('#fm')); data = isArr ? f.items : f; } else data = JSON.parse($('#js').value); jsonMode = !jsonMode; $('#mode').textContent = jsonMode ? 'Edit as form' : 'Edit as JSON'; draw(); } catch (e) { toast(e.message, true); } };
-  $('#save').onclick = e => busy(e.target, async () => {
-    if (jsonMode) data = JSON.parse($('#js').value); else { const f = readFields($('#fm')); data = isArr ? f.items : f; }
-    const res = await api('file', { method: 'PUT', body: { path, sha, content: JSON.stringify(data, null, 2) + '\n', message: 'Update settings “' + file + '”' } });
-    sha = res.sha; dirty = false; toast('Settings saved.');
-  });
+  $('#mode').onclick = () => { try { if (!jsonMode) { const f = readFields($('#fm')); data = isArr ? f.items : f; } else data = JSON.parse($('#js').value); Object.keys(wrapped).forEach(k => delete wrapped[k]); Object.assign(wrapped, isArr ? { items: data } : data); jsonMode = !jsonMode; $('#mode').textContent = jsonMode ? 'Back to form' : 'Advanced (JSON)'; const d = dirty; draw(); setDirty(d); } catch (e) { toast(e.message, true); } };
 }
 
 /* ---------- Media ---------- */
@@ -358,6 +543,7 @@ async function viewNews() {
     toast('Saved. Applies from the next run.');
   });
 }
+
 
 async function boot() {
   ME = await api('me').catch(() => ({}));

@@ -37,6 +37,13 @@ export async function listDir(env, dir) {
   return results.map((r) => ({ name: r.path.split('/').pop(), path: r.path, sha: String(r.version), size: r.size, type: 'file' }));
 }
 
+// Every item in a folder with its content, in one query (used for admin lists and search).
+export async function listItems(env, dir) {
+  const d = safePath(dir).replace(/\/$/, '');
+  const { results } = await db(env).prepare("SELECT path, body, version, updated_at, updated_by FROM content WHERE path LIKE ? AND path NOT LIKE ? ORDER BY path").bind(d + '/%', d + '/%/%').all();
+  return results.map((r) => ({ name: r.path.split('/').pop(), path: r.path, sha: String(r.version), content: r.body, updated: r.updated_at, by: r.updated_by }));
+}
+
 export async function readFile(env, path) {
   const p = safePath(path);
   const row = await db(env).prepare('SELECT path, body, version FROM content WHERE path = ?').bind(p).first();

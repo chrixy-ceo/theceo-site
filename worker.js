@@ -2,7 +2,7 @@
 import adminHtml from './worker/admin.html';
 import astro from './dist/_worker.js/index.js';
 import { login, readSession, clearSession, sameOrigin, authConfigured } from './worker/auth.js';
-import { listDir, readFile, writeFile, deleteFile, recentCommits, serveMedia, HttpError } from './worker/db.js';
+import { listDir, listItems, readFile, writeFile, deleteFile, recentCommits, serveMedia, HttpError } from './worker/db.js';
 import { runNews, newsStatus, getConfig, saveConfig } from './worker/news.js';
 
 const SEC_HEADERS = {
@@ -62,6 +62,7 @@ async function admin(request, env, ctx, url) {
 
   switch (`${m} ${route}`) {
     case 'GET list': return json(await listDir(env, url.searchParams.get('dir')));
+    case 'GET items': return json(await listItems(env, url.searchParams.get('dir')));
     case 'GET file': return json(await readFile(env, url.searchParams.get('path')));
     case 'PUT file': return json(await writeFile(env, body, session.u));
     case 'DELETE file': return json(await deleteFile(env, body, session.u));

@@ -133,7 +133,7 @@ function shell() {
     ${link('dashboard', 'Dashboard')}
     <div class="grp">Content</div>${Object.entries(COLLECTIONS).map(([k, c]) => link('c/' + k, c.label)).join('')}${link('media', 'Media library')}
     <div class="grp">Configuration</div>${Object.entries(SETTINGS).map(([f, l]) => link('s/' + f, l)).join('')}
-    <div class="grp">Automation</div>${link('news', 'News feed (cron)')}
+    <div class="grp">Automation</div>${link('news', 'Auto-posting (hourly)')}
     <div class="grp">Account</div>${link('activity', 'Activity log')}<a href="/" target="_blank">View site ↗</a><a href="#" id="lo">Sign out</a></nav>
     <div id="scrim"></div><main><div class="top"><button class="btn" id="mbtn">☰</button><h2 id="title"></h2><div id="actions" style="display:flex;gap:8px;flex-wrap:wrap"></div></div><div id="view"></div></main></div>`;
   $('#lo').onclick = async e => { e.preventDefault(); await api('logout', { method: 'POST' }).catch(() => {}); renderLogin('Signed out.'); };
@@ -166,11 +166,11 @@ window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); 
 async function viewDashboard() {
   setHead('Dashboard', `<a class="btn p" href="#c/posts/new">+ New post</a><a class="btn" href="#c/opportunities/new">+ New opportunity</a>`);
   const checks = [[ME.configured, 'Admin password set (ADMIN_PASSWORD)'], [ME.db, 'Content database connected (D1)'], [ME.media, 'Media storage connected (R2)'], [ME.kv, 'News storage connected (KV)']];
-  $('#view').innerHTML = `<div class="grid" id="stats">${Object.entries(COLLECTIONS).map(([k, c]) => `<a class="card stat" href="#c/${k}" style="text-decoration:none;color:inherit"><b id="n-${k}">…</b><span>${c.label}</span></a>`).join('')}<a class="card stat" href="#news" style="text-decoration:none;color:inherit"><b id="n-news">…</b><span>News headlines</span></a></div>
+  $('#view').innerHTML = `<div class="grid" id="stats">${Object.entries(COLLECTIONS).map(([k, c]) => `<a class="card stat" href="#c/${k}" style="text-decoration:none;color:inherit"><b id="n-${k}">…</b><span>${c.label}</span></a>`).join('')}<a class="card stat" href="#news" style="text-decoration:none;color:inherit"><b id="n-news">…</b><span>Auto-posts (recent)</span></a></div>
     <div class="row2"><div class="card"><h3 style="margin-top:0">Setup</h3><ul class="chk">${checks.map(([ok, t]) => `<li>${ok ? '✅' : '⚠️'} ${t}</li>`).join('')}</ul><p class="mu">Content is stored in Cloudflare D1, and changes are saved instantly.</p></div>
     <div class="card"><h3 style="margin-top:0">Recent changes</h3><div id="rc" class="mu">Loading…</div></div></div>`;
   Object.entries(COLLECTIONS).forEach(([k, c]) => api('list?dir=' + c.dir).then(l => $('#n-' + k).textContent = l.filter(f => f.type === 'file').length).catch(() => $('#n-' + k).textContent = '–'));
-  api('news/status').then(s => $('#n-news').textContent = (s.categories || []).reduce((a, c) => a + c.count, 0)).catch(() => $('#n-news').textContent = '–');
+  api('news/status').then(s => $('#n-news').textContent = (s.runs || []).reduce((a, r) => a + (r.posts || []).filter(x => x.created).length, 0)).catch(() => $('#n-news').textContent = '–');
   api('commits').then(cs => $('#rc').innerHTML = cs.length === 0 ? 'No changes yet. Edits you make here will show up in this list.' : cs.slice(0, 6).map(c => `<div style="margin-bottom:8px"><b style="color:var(--tx)">${esc(c.message)}</b><br>${esc(c.author)} · ${ago(c.date)}</div>`).join('')).catch(e => $('#rc').textContent = e.message);
 }
 
@@ -324,18 +324,22 @@ async function viewMedia() {
 
 /* ---------- News cron ---------- */
 async function viewNews() {
-  setHead('News feed', '<a class="btn" href="/news/" target="_blank">View page ↗</a><button class="btn p" id="run">Run now</button>');
+  setHead('Auto-posting', '<button class="btn p" id="run">Run now</button>');
   const s = await api('news/status');
   if (!s.kv) { $('#view').innerHTML = '<div class="card">⚠️ The NEWS KV namespace is not bound to the Worker. Deploy with the wrangler.jsonc in this repo.</div>'; return; }
   const last = s.runs[0]; const cfg = s.config;
   $('#view').innerHTML = `<div class="grid">
-      <div class="card stat"><b>${s.config.enabled ? 'On' : 'Off'}</b><span>Hourly collection</span></div>
+      <div class="card stat"><b>${s.config.enabled ? 'On' : 'Off'}</b><span>Hourly job</span></div>
       <div class="card stat"><b>${ago(s.generated)}</b><span>Last update</span></div>
-      <div class="card stat"><b>${s.categories.reduce((a, c) => a + c.count, 0)}</b><span>Headlines stored</span></div>
+      <div class="card stat"><b>${s.runs.reduce((a, r) => a + (r.posts || []).filter(x => x.created).length, 0)}</b><span>Posts created (recent runs)</span></div>
       <div class="card stat"><b>${last ? (last.ok ? '<span style="color:var(--ok)">Healthy</span>' : `<span style="color:var(--er)">${last.fatal ? 'Failed' : last.failed + ' failing'}</span>`) : '—'}</b><span>Last run${s.running ? ' (running now)' : ''}</span></div></div>
-    <div class="card"><h3 style="margin-top:0">Categories</h3><table class="resp"><tr><th>Category</th><th>Headlines</th><th>Updated</th><th>Status</th></tr>${s.categories.map(c => `<tr><td>${esc(c.name)}</td><td>${c.count}</td><td>${ago(c.updated)}</td><td>${c.failures ? `<span class="pill er" title="${esc(c.error)}">${c.failures}× failed: ${esc(c.error)}</span>` : c.error ? `<span class="pill wa" title="${esc(c.error)}">Partial: ${esc(c.error)}</span>` : '<span class="pill ok">OK</span>'}</td></tr>`).join('') || '<tr><td class="mu">No runs yet. Click “Run now”.</td></tr>'}</table></div>
+    <div class="card"><h3 style="margin-top:0">Story sources by category</h3><table class="resp"><tr><th>Category</th><th>Stories found</th><th>Updated</th><th>Status</th></tr>${s.categories.map(c => `<tr><td>${esc(c.name)}</td><td>${c.count}</td><td>${ago(c.updated)}</td><td>${c.failures ? `<span class="pill er" title="${esc(c.error)}">${c.failures}× failed: ${esc(c.error)}</span>` : c.error ? `<span class="pill wa" title="${esc(c.error)}">Partial: ${esc(c.error)}</span>` : '<span class="pill ok">OK</span>'}</td></tr>`).join('') || '<tr><td class="mu">No runs yet. Click “Run now”.</td></tr>'}</table></div>
     <div class="card" id="nc"><h3 style="margin-top:0">Settings</h3><div class="row2">
-      <div><label>Collection</label><select id="n_enabled"><option value="true" ${cfg.enabled ? 'selected' : ''}>Enabled (every hour)</option><option value="false" ${!cfg.enabled ? 'selected' : ''}>Paused</option></select></div>
+      <div><label>Auto-posting</label><select id="a_on"><option value="true" ${cfg.autopost.enabled ? 'selected' : ''}>On: create posts every hour</option><option value="false" ${!cfg.autopost.enabled ? 'selected' : ''}>Off</option></select></div>
+      <div><label>New posts are</label><select id="a_pub"><option value="false" ${!cfg.autopost.publish ? 'selected' : ''}>Saved as drafts (I review first)</option><option value="true" ${cfg.autopost.publish ? 'selected' : ''}>Published straight away</option></select></div>
+      <div><label>Max posts per category per day</label><input id="a_max" type="number" min="0" max="24" value="${cfg.autopost.perCategoryPerDay}"></div>
+      <div><label>Minimum priority score <small>0–100, higher = only big stories</small></label><input id="a_min" type="number" min="0" max="100" value="${cfg.autopost.minScore}"></div>
+      <div><label>Hourly job</label><select id="n_enabled"><option value="true" ${cfg.enabled ? 'selected' : ''}>Running (every hour)</option><option value="false" ${!cfg.enabled ? 'selected' : ''}>Paused</option></select></div>
       <div><label>Sources</label><select id="n_src"><option value="google,bing" ${(cfg.sources||[]).length===2?'selected':''}>Google News + Bing News</option><option value="google" ${(cfg.sources||[]).join()==='google'?'selected':''}>Google News only</option><option value="bing" ${(cfg.sources||[]).join()==='bing'?'selected':''}>Bing News only</option></select></div>
       <div><label>Freshness window <small>e.g. 1d, 12h</small></label><input id="n_window" value="${esc(cfg.window)}"></div>
       <div><label>Headlines per category</label><input id="n_per" type="number" min="1" max="50" value="${cfg.perCategory}"></div>
@@ -346,12 +350,12 @@ async function viewNews() {
       <div style="grid-column:1/-1"><label>Skip categories <small>comma separated</small></label><input id="n_dis" value="${esc(cfg.disabled.join(', '))}"></div>
       <div style="grid-column:1/-1"><label>Custom search per category <small>one per line: Category = search terms. Default is the category name.</small></label><textarea class="code" id="n_q" rows="6" placeholder="Jobs = remote jobs hiring Nigeria&#10;Scholarships = scholarship for African students">${esc(Object.entries(cfg.queries).map(([k, v]) => k + ' = ' + v).join('\n'))}</textarea></div>
     </div><p><button class="btn p" id="nsave">Save settings</button></p></div>
-    <div class="card"><h3 style="margin-top:0">Run history</h3><table class="resp"><tr><th>When</th><th>Trigger</th><th>Result</th><th>Time</th></tr>${s.runs.map(r => `<tr><td>${new Date(r.at).toLocaleString()}</td><td>${esc(r.trigger)}</td><td>${r.fatal ? `<span class="pill er">${esc(r.fatal)}</span>` : r.ok ? `<span class="pill ok">${r.total} OK</span>` : `<span class="pill wa">${r.failed}/${r.total} failed</span>`}</td><td>${(r.ms / 1000).toFixed(1)}s</td></tr>`).join('') || '<tr><td class="mu">No runs yet.</td></tr>'}</table></div>`;
-  $('#run').onclick = e => busy(e.target, async () => { const r = await api('news/run', { method: 'POST' }); if (r.ok) toast(r.skipped ? 'Skipped: ' + r.skipped : 'Done: ' + r.run.total + ' categories, ' + r.run.failed + ' failed'); else toast(r.error, true); viewNews(); });
+    <div class="card"><h3 style="margin-top:0">Run history</h3><table class="resp"><tr><th>When</th><th>Trigger</th><th>Result</th><th>Posts created</th><th>Time</th></tr>${s.runs.map(r => `<tr><td>${new Date(r.at).toLocaleString()}</td><td>${esc(r.trigger)}</td><td>${r.fatal ? `<span class="pill er">${esc(r.fatal)}</span>` : r.ok ? `<span class="pill ok">${r.total} OK</span>` : `<span class="pill wa">${r.failed}/${r.total} failed</span>`}</td><td>${(r.posts || []).filter(x => x.created).map(x => `<a href="#c/posts/${encodeURIComponent(x.created.split('/').pop())}">${esc(x.title)}</a>${x.ai ? '' : ' <span class="pill wa">template</span>'}`).join('<br>') || '<span class="mu">none</span>'}</td><td>${(r.ms / 1000).toFixed(1)}s</td></tr>`).join('') || '<tr><td class="mu">No runs yet.</td></tr>'}</table></div>`;
+  $('#run').onclick = e => busy(e.target, async () => { const r = await api('news/run', { method: 'POST' }); if (r.ok) toast(r.skipped ? 'Skipped: ' + r.skipped : 'Done: ' + (r.run.posts || []).filter(x => x.created).length + ' post(s) created'); else toast(r.error, true); viewNews(); });
   $('#nsave').onclick = e => busy(e.target, async () => {
     const queries = {}; $('#n_q').value.split('\n').forEach(l => { const i = l.indexOf('='); if (i > 0) queries[l.slice(0, i).trim()] = l.slice(i + 1).trim(); });
-    await api('news/config', { method: 'PUT', body: { enabled: $('#n_enabled').value === 'true', sources: $('#n_src').value.split(','), window: $('#n_window').value.trim(), perCategory: +$('#n_per').value, maxAgeDays: +$('#n_age').value, hl: $('#n_hl').value.trim(), gl: $('#n_gl').value.trim(), ceid: $('#n_ceid').value.trim(), extra: $('#n_extra').value, disabled: $('#n_dis').value, queries } });
-    toast('News settings saved. They apply from the next run.');
+    await api('news/config', { method: 'PUT', body: { enabled: $('#n_enabled').value === 'true', autopost: { enabled: $('#a_on').value === 'true', publish: $('#a_pub').value === 'true', perCategoryPerDay: +$('#a_max').value, minScore: +$('#a_min').value }, sources: $('#n_src').value.split(','), window: $('#n_window').value.trim(), perCategory: +$('#n_per').value, maxAgeDays: +$('#n_age').value, hl: $('#n_hl').value.trim(), gl: $('#n_gl').value.trim(), ceid: $('#n_ceid').value.trim(), extra: $('#n_extra').value, disabled: $('#n_dis').value, queries } });
+    toast('Saved. Applies from the next run.');
   });
 }
 

@@ -1,9 +1,9 @@
-// Serves the site, the /administrator CMS (content in D1, media in R2), the news API and the hourly news cron.
+// Serves the site, the /administrator CMS (content in D1, media in R2) and the hourly auto-post cron.
 // Also keeps the old Decap editor's GitHub sign-in (/api/auth and /api/callback).
 import adminHtml from './worker/admin.html';
 import { login, readSession, clearSession, sameOrigin, authConfigured } from './worker/auth.js';
 import { listDir, readFile, writeFile, deleteFile, recentCommits, serveMedia, HttpError } from './worker/db.js';
-import { runNews, publicNews, newsStatus, getConfig, saveConfig } from './worker/news.js';
+import { runNews, newsStatus, getConfig, saveConfig } from './worker/news.js';
 
 const SEC_HEADERS = {
   'X-Frame-Options': 'DENY',
@@ -23,7 +23,6 @@ export default {
     try {
       if (p === '/api/auth') return startSignIn(url, env);
       if (p === '/api/callback') return finishSignIn(request, url, env);
-      if (p === '/api/news') return newsApi(url, env);
       if (p.startsWith('/uploads/')) { const r = await serveMedia(env, decodeURIComponent(p.slice(9))); if (r) return r; }
       if (p === '/administrator' || p.startsWith('/administrator/')) return await admin(request, env, ctx, url);
       return env.ASSETS.fetch(request);
@@ -38,11 +37,6 @@ export default {
     ctx.waitUntil(runNews(env, { trigger: 'cron' }));
   },
 };
-
-async function newsApi(url, env) {
-  const data = await publicNews(env, url.searchParams.get('category'));
-  return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=120, s-maxage=600', 'Access-Control-Allow-Origin': '*' } });
-}
 
 async function admin(request, env, ctx, url) {
   const p = url.pathname.replace(/\/+$/, '') || '/administrator';

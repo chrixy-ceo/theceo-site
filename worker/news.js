@@ -1,3 +1,5 @@
+import { autoPost, blogCategories } from './autopost.js';
+
 // Hourly news collector (Google News + Bing News), ranked by priority. One run = every category, fetched in parallel with
 // timeouts, retries and backoff. A failing category keeps its last good items, so the
 // listing never goes empty. A KV lock stops overlapping runs. Results and a run log live in KV.
@@ -26,6 +28,8 @@ export const DEFAULT_CONFIG = {
   },
   extra: [],             // extra categories to track besides the site's own
   disabled: ['Other'],   // category names to skip
+  // Hourly auto-posting: turns the top fresh story per blog category into a post.
+  autopost: { enabled: true, publish: false, perCategoryPerDay: 2, minScore: 45 },
 };
 
 const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -33,28 +37,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function getConfig(env) {
   const saved = env.NEWS ? await env.NEWS.get(KEY_CONFIG, 'json') : null;
-  return { ...DEFAULT_CONFIG, ...(saved || {}) };
+  return { ...DEFAULT_CONFIG, ...(saved || {}), autopost: { ...DEFAULT_CONFIG.autopost, ...(saved?.autopost || {}) } };
 }
 
 export async function saveConfig(env, cfg) {
   const clean = { ...DEFAULT_CONFIG };
   for (const k of Object.keys(DEFAULT_CONFIG)) if (cfg[k] !== undefined) clean[k] = cfg[k];
   clean.sources = (Array.isArray(clean.sources) ? clean.sources : []).filter((x) => ['google', 'bing'].includes(x)); if (!clean.sources.length) clean.sources = ['google', 'bing'];
+  const ap = { ...DEFAULT_CONFIG.autopost, ...(cfg.autopost || {}) };
+  clean.autopost = { enabled: Boolean(ap.enabled), publish: Boolean(ap.publish), perCategoryPerDay: Math.min(24, Math.max(0, Number(ap.perCategoryPerDay) || 0)), minScore: Math.min(100, Math.max(0, Number(ap.minScore) || 0)) };
   clean.perCategory = Math.min(50, Math.max(1, Number(clean.perCategory) || 20));
   clean.maxAgeDays = Math.min(60, Math.max(1, Number(clean.maxAgeDays) || 7));
   clean.extra = (Array.isArray(clean.extra) ? clean.extra : String(clean.extra).split(',')).map((s) => String(s).trim()).filter(Boolean);
   clean.disabled = (Array.isArray(clean.disabled) ? clean.disabled : String(clean.disabled).split(',')).map((s) => String(s).trim()).filter(Boolean);
   await env.NEWS.put(KEY_CONFIG, JSON.stringify(clean));
   return clean;
-}
-
-// Site categories come from /categories.json, which the Astro build generates from posts and opportunities.
-async function siteCategories(env) {
-  try {
-    const res = await env.ASSETS.fetch('https://assets.local/categories.json');
-    if (res.ok) return (await res.json()).all || [];
-  } catch {}
-  return [];
 }
 
 async function fetchWithRetry(url, { tries = 3, timeout = 10000 } = {}) {
@@ -189,7 +186,7 @@ export async function runNews(env, { trigger = 'cron', force = false } = {}) {
 
   const started = Date.now();
   try {
-    const names = [...new Set([...(await siteCategories(env)), ...cfg.extra])].filter((c) => !cfg.disabled.includes(c));
+    const names = [...new Set([...(await blogCategories(env)), ...cfg.extra])].filter((c) => !cfg.disabled.includes(c));
     const prev = (await env.NEWS.get(KEY_DATA, 'json')) || { categories: {} };
     const results = await pool(names, 4, (name) => collect(name, cfg, prev.categories[slugify(name)]?.items));
 
@@ -212,7 +209,9 @@ export async function runNews(env, { trigger = 'cron', force = false } = {}) {
     const data = { generated: new Date().toISOString(), categories };
     await env.NEWS.put(KEY_DATA, JSON.stringify(data));
 
-    const run = { id: runId, trigger, at: new Date(started).toISOString(), ms: Date.now() - started, ok: report.every((r) => r.ok), total: report.length, failed: report.filter((r) => !r.ok).length, report };
+    let posts = [];
+    try { posts = await autoPost(env, cfg, categories); } catch (e) { posts = [{ error: String(e?.message || e) }]; console.error('autopost_failed', e?.stack || e); }
+    const run = { id: runId, trigger, at: new Date(started).toISOString(), ms: Date.now() - started, ok: report.every((r) => r.ok), total: report.length, failed: report.filter((r) => !r.ok).length, report, posts };
     const runs = ((await env.NEWS.get(KEY_RUNS, 'json')) || []).slice(0, 47);
     await env.NEWS.put(KEY_RUNS, JSON.stringify([run, ...runs]));
     console.log(JSON.stringify({ event: 'news_run', ...run, report: undefined }));
@@ -225,14 +224,6 @@ export async function runNews(env, { trigger = 'cron', force = false } = {}) {
   } finally {
     if ((await env.NEWS.get(KEY_LOCK)) === runId) await env.NEWS.delete(KEY_LOCK);
   }
-}
-
-export async function publicNews(env, category) {
-  const data = env.NEWS ? await env.NEWS.get(KEY_DATA, 'json') : null;
-  if (!data) return { generated: null, categories: [] };
-  const cats = Object.values(data.categories).filter((c) => c.items.length);
-  const pick = category ? cats.filter((c) => c.slug === category) : cats;
-  return { generated: data.generated, categories: pick.map(({ name, slug, items, updated }) => ({ name, slug, updated, items })) };
 }
 
 export async function newsStatus(env) {

@@ -26,7 +26,7 @@ nav .acct{margin-top:auto;border-top:1px solid var(--ln);padding-top:10px}nav .a
 nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:18px 10px 6px;font-weight:600}
 nav a{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;color:var(--tx);text-decoration:none}
 nav a:hover{background:var(--bg)}nav a.on{background:var(--acbg);color:var(--ac);font-weight:600}
-.badge{min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--wa);color:#fff;font-size:11.5px;font-weight:700;display:inline-grid;place-items:center}
+.badge[hidden]{display:none!important}.badge{min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--wa);color:#fff;font-size:11.5px;font-weight:700;display:inline-grid;place-items:center}
 main{padding:24px 28px 120px;max-width:1150px;width:100%;min-width:0}
 .crumb{font-size:13px;color:var(--mu);margin-bottom:6px;min-height:20px}.crumb a{color:var(--mu);text-decoration:none}.crumb a:hover{color:var(--ac)}
 .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}.top h2{margin:0;font-size:22px;margin-right:auto}
@@ -84,7 +84,7 @@ const SECTIONS = [
   { id: 'site', label: 'Website', icon: '▤', tabs: [['s/settings.json', 'Profile'], ['s/about.json', 'About'], ['c/projects', 'Projects'], ['s/services.json', 'Services'], ['s/stack.json', 'Tools'], ['c/certifications', 'Certifications'], ['c/pages', 'Pages'], ['s/site.json', 'Blog & ads settings']] },
   { id: 'media', label: 'Media', icon: '▣', tabs: [['media', 'Images & files']] },
   { id: 'auto', label: 'Auto-posting', icon: '↻', tabs: [['news', 'Auto-posting']] },
-  { id: 'acct', label: 'Activity', icon: '≡', tabs: [['activity', 'Activity log']], hidden: true },
+  { id: 'acct', label: 'Account', icon: '≡', tabs: [['account', 'Password & login'], ['activity', 'Activity log']], hidden: true },
 ];
 const sectionOf = h => SECTIONS.find(sec => sec.tabs.some(([t]) => h === t || h.startsWith(t + '/'))) || SECTIONS[0];
 const SETTINGS = {
@@ -110,7 +110,7 @@ const HINTS = {
   whatsapp: 'Country code and number, no + or spaces. Example: 2348012345678', short_name: 'Shown on small screens, e.g. C.E.O.', headline: 'The big line under your photo.',
   seo_title: 'Shown in Google results and browser tabs.', seo_description: 'One or two sentences shown under the title in Google.', og_image: 'Shown when the link is shared on WhatsApp, X, LinkedIn…',
   default_og_image: 'Used when a page has no share image of its own.', adsense_client: 'Starts with ca-pub-', category: 'Pick an existing category or type a new one.',
-  description: 'Shown in lists and in Google. Keep it under 160 characters.', deadline: 'Opportunities past their deadline show as Closed.',
+  description: 'Shown in lists and in Google. Keep it under 160 characters.', deadline: 'Leave empty (or click No deadline) if there is none: it stays Open and is listed first. Past deadlines show as Closed.',
 };
 // Settings fields are grouped into sections by these rules (first match wins).
 const GROUPS = [
@@ -196,6 +196,7 @@ function statusPill(it, key) {
   if (key === 'posts' || key === 'opportunities') {
     if (isDraft(it.d)) return `<span class="pill wa">Draft</span>${it.f.by === 'autopost' ? ' <span class="pill ac">Auto</span>' : ''}`;
     if (key === 'opportunities' && it.d.deadline && new Date(it.d.deadline) < new Date(today())) return '<span class="pill er">Closed</span>';
+    if (key === 'opportunities' && !it.d.deadline) return '<span class="pill ok">Open</span> <span class="pill">No deadline</span>';
     return `<span class="pill ok">Live</span>${it.f.by === 'autopost' ? ' <span class="pill ac">Auto</span>' : ''}`;
   }
   return '';
@@ -214,7 +215,7 @@ function shell() {
   $('#root').innerHTML = `<div id="app"><nav id="nav"><h1>The<span>CEO</span> Admin</h1>
     <button class="srch" id="sbtn"><span>Search…</span><kbd>Ctrl K</kbd></button>
     <div class="mainnav">${SECTIONS.filter(x => !x.hidden).map(x => `<a href="#${x.tabs[0][0]}" data-sec="${x.id}"><i>${x.icon}</i><span>${x.label}</span>${x.id === 'blog' ? '<span class="badge" id="nb" hidden></span>' : ''}</a>`).join('')}</div>
-    <div class="acct"><a href="#activity" data-sec="acct"><span>Activity log</span></a><a href="/" target="_blank"><span>View website ↗</span></a><a href="#" id="lo"><span>Sign out</span></a></div></nav>
+    <div class="acct"><a href="#account" data-sec="acct"><span>Account & password</span></a><a href="#activity"><span>Activity log</span></a><a href="/" target="_blank"><span>View website ↗</span></a><a href="#" id="lo"><span>Sign out</span></a></div></nav>
     <div id="scrim"></div><main><div class="crumb" id="crumb"></div><div class="top"><button class="btn" id="mbtn" aria-label="Menu">☰</button><h2 id="title"></h2><div id="actions" style="display:flex;gap:8px;flex-wrap:wrap"></div></div><div class="subnav" id="subnav"></div><div id="view"></div></main></div>`;
   $('#lo').onclick = async e => { e.preventDefault(); await api('logout', { method: 'POST' }).catch(() => {}); renderLogin('Signed out.'); };
   $('#mbtn').onclick = () => $('#nav').classList.toggle('open'); $('#scrim').onclick = () => $('#nav').classList.remove('open');
@@ -251,6 +252,7 @@ async function route() {
     if (a === 'media') return await viewMedia();
     if (a === 'news') return await viewNews();
     if (a === 'activity') return await viewActivity();
+    if (a === 'account') return await viewAccount();
     $('#view').textContent = 'Not found';
   } catch (e) { $('#view').innerHTML = `<div class="card"><b>Could not load this page.</b><p class="mu">${esc(e.message)}</p><button class="btn" onclick="route()">Try again</button></div>`; }
 }
@@ -307,6 +309,35 @@ async function viewActivity() {
   $('#view').innerHTML = `<div class="card"><table class="resp"><tr><th>Change</th><th>By</th><th>When</th></tr>${cs.map(c => `<tr><td>${esc(c.message)}</td><td>${esc(c.author)}</td><td class="mu">${ago(c.date)}</td></tr>`).join('') || '<tr><td class="empty">No changes yet.</td></tr>'}</table></div>`;
 }
 
+/* ---------- Account & password ---------- */
+async function viewAccount() {
+  setHead('Account & password');
+  const a = await api('account');
+  $('#view').innerHTML = `<p class="sub">Change how you sign in to this admin.</p>
+    <div class="card"><h3>Signed in as ${esc(a.username)}</h3><p class="mu" style="margin:4px 0 0">${a.source === 'admin' ? 'Password last changed ' + ago(a.changed) + '.' : 'You are still using the first password set in Cloudflare. Change it here to use your own.'}</p></div>
+    <form class="card" id="pf" autocomplete="off"><h3>Change password</h3>
+      <div class="row2">
+        <div class="full"><label>Current password</label><input type="password" name="current" autocomplete="current-password" required></div>
+        <div><label>New password<span class="hint">At least 10 characters. A short sentence is easy to remember and hard to guess.</span></label><input type="password" name="password" autocomplete="new-password" minlength="10" required></div>
+        <div><label>Type the new password again<span class="hint">&nbsp;</span></label><input type="password" name="confirm" autocomplete="new-password" required></div>
+        <div><label>Username<span class="hint">Change it here if you want a different one.</span></label><input name="username" value="${esc(a.username)}" autocomplete="username" required></div>
+        <div><label>&nbsp;<span class="hint">&nbsp;</span></label><label style="font-weight:400;display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="show" style="width:auto"> Show passwords</label></div>
+      </div>
+      <div id="strength" class="mu" style="font-size:13px;margin-top:10px"></div>
+      <p class="mu" style="font-size:13px">Changing your password signs you out on every other device.</p>
+      <button class="btn p" id="pbtn">Change password</button>
+    </form>`;
+  const f = $('#pf');
+  $('#show').onchange = e => f.querySelectorAll('input[type=password],input[data-pw]').forEach(i => { i.dataset.pw = 1; i.type = e.target.checked ? 'text' : 'password'; });
+  f.password.oninput = () => { const v = f.password.value; const score = [v.length >= 10, v.length >= 14, /[A-Z]/.test(v) && /[a-z]/.test(v), /\d/.test(v), /[^A-Za-z0-9]/.test(v)].filter(Boolean).length; $('#strength').innerHTML = v ? `Strength: <b style="color:var(--${score >= 4 ? 'ok' : score >= 2 ? 'wa' : 'er'})">${score >= 4 ? 'Strong' : score >= 2 ? 'Okay' : 'Weak'}</b>` : ''; };
+  f.onsubmit = e => { e.preventDefault(); busy($('#pbtn'), async () => {
+    if (f.password.value !== f.confirm.value) throw new Error('The two new passwords do not match.');
+    if (f.password.value.length < 10) throw new Error('The new password must be at least 10 characters.');
+    await api('account/password', { method: 'POST', body: { current: f.current.value, password: f.password.value, username: f.username.value.trim() } });
+    ME.user = f.username.value.trim(); f.reset(); toast('Password changed. Other devices have been signed out.'); viewAccount();
+  }); };
+}
+
 /* ---------- Drafts review ---------- */
 async function viewDrafts() {
   setHead('Drafts to review', '');
@@ -356,7 +387,8 @@ function fieldInput(k, v, opts = {}) {
   const id = 'f_' + k;
   if (opts.list) return `<input id="${id}" data-k="${k}" value="${esc(v)}" list="dl_${k}"><datalist id="dl_${k}">${opts.list.map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   if (IMG_KEY.test(k) || /pdf|^cv$/.test(k)) return `<div class="imgf">${v && IMG_KEY.test(k) ? `<img src="${esc(v)}" alt="">` : ''}<input id="${id}" data-k="${k}" value="${esc(v)}" placeholder="/uploads/…"><button class="btn" type="button" data-up="${id}">Upload</button></div>`;
-  if (/date|deadline/i.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v || '2000-01-01'))) return `<input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}">`;
+  if (k === 'deadline') return `<div class="imgf"><input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}"><button class="btn" type="button" data-nodl="${id}">No deadline</button></div>`;
+  if (/date/i.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v || '2000-01-01'))) return `<input id="${id}" data-k="${k}" type="date" value="${esc(String(v || '').slice(0, 10))}">`;
   if (typeof v === 'boolean' || /^(true|false)$/i.test(String(v))) return `<select id="${id}" data-k="${k}" data-bool="${typeof v === 'boolean' ? 'native' : 'str'}"><option value="true" ${String(v).toLowerCase() === 'true' ? 'selected' : ''}>Yes</option><option value="false" ${String(v).toLowerCase() !== 'true' ? 'selected' : ''}>No</option></select>`;
   if (Array.isArray(v)) return listEditor(k, v);
   if (v !== null && typeof v === 'object') return `<textarea class="code" id="${id}" data-k="${k}" data-json="1" rows="8">${esc(JSON.stringify(v, null, 2))}</textarea>`;
@@ -406,6 +438,7 @@ function readFields(scope) {
 }
 function wireUploads(scope) {
   scope.querySelectorAll('[data-up]').forEach(b => b.onclick = () => pickUpload(url => { const i = $('#' + b.dataset.up); i.value = url; i.dispatchEvent(new Event('input', { bubbles: true })); const img = i.previousElementSibling; if (img?.tagName === 'IMG') img.src = url; else if (IMG_KEY.test(i.dataset.k)) i.insertAdjacentHTML('beforebegin', `<img src="${esc(url)}" alt="">`); }));
+  scope.querySelectorAll('[data-nodl]').forEach(b => b.onclick = () => { const i = $('#' + b.dataset.nodl); i.value = ''; setDirty(true); });
   scope.addEventListener('input', () => setDirty(true));
 }
 
@@ -523,41 +556,59 @@ async function viewMedia() {
 
 /* ---------- News cron ---------- */
 async function viewNews() {
-  setHead('Auto-posting', '<button class="btn p" id="run">Run now</button>');
+  setHead('Auto-posting', '<button class="btn" id="tai">Test AI writer</button><button class="btn p" id="run">Run now</button>');
   const s = await api('news/status');
-  if (!s.kv) { $('#view').innerHTML = '<div class="card">⚠️ The NEWS KV namespace is not bound to the Worker. Deploy with the wrangler.jsonc in this repo.</div>'; return; }
-  const last = s.runs[0]; const cfg = s.config;
-  $('#view').innerHTML = `<div class="grid">
-      <div class="card stat"><b>${s.config.enabled ? 'On' : 'Off'}</b><span>Hourly job</span></div>
-      <div class="card stat"><b>${ago(s.generated)}</b><span>Last update</span></div>
-      <div class="card stat"><b>${s.runs.reduce((a, r) => a + (r.posts || []).filter(x => x.created).length, 0)}</b><span>Posts created (recent runs)</span></div>
-      <div class="card stat"><b>${last ? (last.ok ? '<span style="color:var(--ok)">Healthy</span>' : `<span style="color:var(--er)">${last.fatal ? 'Failed' : last.failed + ' failing'}</span>`) : '—'}</b><span>Last run${s.running ? ' (running now)' : ''}</span></div></div>
-    <div class="card"><h3 style="margin-top:0">Story sources by category</h3><table class="resp"><tr><th>Category</th><th>Stories found</th><th>Updated</th><th>Status</th></tr>${s.categories.map(c => `<tr><td>${esc(c.name)}</td><td>${c.count}</td><td>${ago(c.updated)}</td><td>${c.failures ? `<span class="pill er" title="${esc(c.error)}">${c.failures}× failed: ${esc(c.error)}</span>` : c.error ? `<span class="pill wa" title="${esc(c.error)}">Partial: ${esc(c.error)}</span>` : '<span class="pill ok">OK</span>'}</td></tr>`).join('') || '<tr><td class="mu">No runs yet. Click “Run now”.</td></tr>'}</table></div>
-    <div class="card" id="nc"><h3 style="margin-top:0">Settings</h3><div class="row2">
-      <div><label>Auto-posting</label><select id="a_on"><option value="true" ${cfg.autopost.enabled ? 'selected' : ''}>On: create posts every hour</option><option value="false" ${!cfg.autopost.enabled ? 'selected' : ''}>Off</option></select></div>
+  if (!s.kv) { $('#view').innerHTML = '<div class="card">Auto-posting storage is not connected yet.</div>'; return; }
+  const cfg = s.config, runs = s.runs || [], last = runs[0];
+  const made = runs.flatMap(r => (r.posts || []).filter(x => x.created).map(x => ({ ...x, at: r.at })));
+  const lastSkips = (last?.posts || []).filter(x => x.skipped);
+  const writerErr = lastSkips.find(x => /writer failed|Workers AI/i.test(x.skipped));
+  const aiState = writerErr ? ['er', 'Needs attention', 'The AI writer failed on the last run. Click “Test AI writer”.']
+    : made.length ? ['ok', 'Working', `Last post written ${ago(made[0].at)}.`]
+    : last ? ['mu', 'Waiting for a good story', 'The writer only posts when a fresh, relevant, high-priority story comes in.'] : ['mu', 'Not run yet', 'Click “Run now” to try it.'];
+  const nextRun = (() => { const d = new Date(); d.setMinutes(60, 0, 0); return Math.max(1, Math.round((d - Date.now()) / 60000)); })();
+  const dot = c => `<i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--${c === 'mu' ? 'ln' : c});margin-right:8px"></i>`;
+  const reason = t => String(t).replace(/^.*?: (already covered|off-topic|too close to source|too similar to an existing post|writer failed)/, '$1').replace(/^already covered.*/, 'Already covered').replace(/^off-topic/, 'Off-topic').replace(/^too close to source.*/, 'Too close to the source').replace(/^too similar.*/, 'Too similar to an existing post').replace(/^no fresh high-priority story/, 'No big story this hour').replace(/^daily limit reached/, 'Daily limit reached');
+  $('#view').innerHTML = `
+    <div class="grid" style="margin-bottom:16px">
+      <div class="card stat"><span>AI writer</span><b style="font-size:18px;margin-top:4px">${dot(aiState[0])}${aiState[1]}</b><span style="font-size:12.5px">${aiState[2]}</span></div>
+      <div class="card stat"><span>Hourly job</span><b style="font-size:18px;margin-top:4px">${dot(cfg.enabled ? 'ok' : 'mu')}${cfg.enabled ? 'On' : 'Paused'}</b><span style="font-size:12.5px">${cfg.enabled ? `Next run in about ${nextRun} min` : 'Turn it on in settings below'}</span></div>
+      <div class="card stat"><span>Posts written</span><b style="margin-top:4px">${made.length}</b><span style="font-size:12.5px">${cfg.autopost.publish ? 'Published automatically' : 'Saved as drafts for you to review'}</span></div>
+    </div>
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Latest posts written</h3>${made.length ? '<a href="#drafts">Review drafts →</a>' : ''}</div>
+      ${made.length ? `<table class="resp">${made.slice(0, 8).map(x => `<tr class="row" onclick="location.hash='c/posts/${encodeURIComponent(x.created.split('/').pop())}'"><td><b>${esc(x.title)}</b></td><td><span class="pill">${esc(x.category)}</span></td><td class="mu">${ago(x.at)}</td></tr>`).join('')}</table>` : '<p class="mu" style="margin:6px 0 0">No posts yet. They appear here as soon as the writer finds a good story.</p>'}
+    </div>
+    <div class="card"><h3>Stories found this hour</h3><p class="mu" style="margin:0 0 10px;font-size:13px">From Google News and Bing News, for each of your blog categories.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${s.categories.map(c => `<span class="pill" style="padding:6px 12px;font-size:13px" title="${c.failures ? 'Could not fetch stories: ' + esc(c.error) : c.error ? 'One source was busy, the other covered it.' : 'Both sources OK'}">${dot(c.failures ? 'er' : 'ok')}${esc(c.name)} · ${c.count}</span>`).join('') || '<span class="mu">Nothing yet. Click “Run now”.</span>'}</div>
+      ${lastSkips.length ? `<details class="sect" style="margin:14px 0 0"><summary class="mu">Why some stories were skipped last run (${lastSkips.length})</summary><ul class="mu" style="margin:8px 0 0;padding-left:18px;font-size:13px">${lastSkips.map(x => `<li>${esc(x.category || '')}: ${esc(reason(x.skipped))}</li>`).join('')}</ul></details>` : ''}
+    </div>
+    <div class="card" id="nc"><h3>Settings</h3><div class="row2">
+      <div><label>Auto-posting</label><select id="a_on"><option value="true" ${cfg.autopost.enabled ? 'selected' : ''}>On: write posts every hour</option><option value="false" ${!cfg.autopost.enabled ? 'selected' : ''}>Off</option></select></div>
       <div><label>New posts are</label><select id="a_pub"><option value="false" ${!cfg.autopost.publish ? 'selected' : ''}>Saved as drafts (I review first)</option><option value="true" ${cfg.autopost.publish ? 'selected' : ''}>Published straight away</option></select></div>
-      <div><label>Max posts per category per day</label><input id="a_max" type="number" min="0" max="24" value="${cfg.autopost.perCategoryPerDay}"></div>
-      <div><label>Minimum priority score <small>0–100, higher = only big stories</small></label><input id="a_min" type="number" min="0" max="100" value="${cfg.autopost.minScore}"></div>
-      <div><label>Hourly job</label><select id="n_enabled"><option value="true" ${cfg.enabled ? 'selected' : ''}>Running (every hour)</option><option value="false" ${!cfg.enabled ? 'selected' : ''}>Paused</option></select></div>
-      <div><label>Sources</label><select id="n_src"><option value="google,bing" ${(cfg.sources||[]).length===2?'selected':''}>Google News + Bing News</option><option value="google" ${(cfg.sources||[]).join()==='google'?'selected':''}>Google News only</option><option value="bing" ${(cfg.sources||[]).join()==='bing'?'selected':''}>Bing News only</option></select></div>
-      <div><label>Freshness window <small>e.g. 1d, 12h</small></label><input id="n_window" value="${esc(cfg.window)}"></div>
-      <div><label>Headlines per category</label><input id="n_per" type="number" min="1" max="50" value="${cfg.perCategory}"></div>
-      <div><label>Drop items older than (days)</label><input id="n_age" type="number" min="1" max="60" value="${cfg.maxAgeDays}"></div>
-      <div><label>Edition language <small>hl</small></label><input id="n_hl" value="${esc(cfg.hl)}"></div>
-      <div><label>Country <small>gl / ceid</small></label><div style="display:flex;gap:8px"><input id="n_gl" value="${esc(cfg.gl)}"><input id="n_ceid" value="${esc(cfg.ceid)}"></div></div>
-      <div style="grid-column:1/-1"><label>Extra categories <small>comma separated, tracked even with no posts</small></label><input id="n_extra" value="${esc(cfg.extra.join(', '))}"></div>
-      <div style="grid-column:1/-1"><label>Skip categories <small>comma separated</small></label><input id="n_dis" value="${esc(cfg.disabled.join(', '))}"></div>
-      <div style="grid-column:1/-1"><label>Custom search per category <small>one per line: Category = search terms. Default is the category name.</small></label><textarea class="code" id="n_q" rows="6" placeholder="Jobs = remote jobs hiring Nigeria&#10;Scholarships = scholarship for African students">${esc(Object.entries(cfg.queries).map(([k, v]) => k + ' = ' + v).join('\n'))}</textarea></div>
-    </div><p><button class="btn p" id="nsave">Save settings</button></p></div>
-    <div class="card"><h3 style="margin-top:0">Run history</h3><table class="resp"><tr><th>When</th><th>Trigger</th><th>Result</th><th>Posts created</th><th>Time</th></tr>${s.runs.map(r => `<tr><td>${new Date(r.at).toLocaleString()}</td><td>${esc(r.trigger)}</td><td>${r.fatal ? `<span class="pill er">${esc(r.fatal)}</span>` : r.ok ? `<span class="pill ok">${r.total} OK</span>` : `<span class="pill wa">${r.failed}/${r.total} failed</span>`}</td><td>${(r.posts || []).filter(x => x.created).map(x => `<a href="#c/posts/${encodeURIComponent(x.created.split('/').pop())}">${esc(x.title)}</a> <span class="pill">${esc(x.format || '')}</span>`).join('<br>') || '<span class="mu">none</span>'}${(r.posts || []).some(x => x.skipped) ? `<details><summary class="mu" style="cursor:pointer">${(r.posts || []).filter(x => x.skipped).length} skipped</summary><div class="mu" style="font-size:12px">${(r.posts || []).filter(x => x.skipped).map(x => esc((x.category ? x.category + ': ' : '') + x.skipped)).join('<br>')}</div></details>` : ''}</td><td>${(r.ms / 1000).toFixed(1)}s</td></tr>`).join('') || '<tr><td class="mu">No runs yet.</td></tr>'}</table></div>`;
-  $('#run').onclick = e => busy(e.target, async () => { const r = await api('news/run', { method: 'POST' }); if (r.ok) toast(r.skipped ? 'Skipped: ' + r.skipped : 'Done: ' + (r.run.posts || []).filter(x => x.created).length + ' post(s) created'); else toast(r.error, true); viewNews(); });
+      <div><label>Most posts per category per day</label><input id="a_max" type="number" min="0" max="24" value="${cfg.autopost.perCategoryPerDay}"></div>
+      <div><label>How big a story must be<span class="hint">0–100. Higher means only major stories.</span></label><input id="a_min" type="number" min="0" max="100" value="${cfg.autopost.minScore}"></div>
+    </div>
+    <details class="sect" style="margin-top:16px"><summary class="mu"><b style="color:var(--tx)">Advanced</b></summary><div class="row2">
+      <div><label>Hourly job</label><select id="n_enabled"><option value="true" ${cfg.enabled ? 'selected' : ''}>Running</option><option value="false" ${!cfg.enabled ? 'selected' : ''}>Paused</option></select></div>
+      <div><label>Sources</label><select id="n_src"><option value="google,bing" ${(cfg.sources || []).length === 2 ? 'selected' : ''}>Google News + Bing News</option><option value="google" ${(cfg.sources || []).join() === 'google' ? 'selected' : ''}>Google News only</option><option value="bing" ${(cfg.sources || []).join() === 'bing' ? 'selected' : ''}>Bing News only</option></select></div>
+      <div><label>Only stories from the last<span class="hint">e.g. 1d or 12h</span></label><input id="n_window" value="${esc(cfg.window)}"></div>
+      <div><label>Stories kept per category</label><input id="n_per" type="number" min="1" max="50" value="${cfg.perCategory}"></div>
+      <div><label>Forget stories older than (days)</label><input id="n_age" type="number" min="1" max="60" value="${cfg.maxAgeDays}"></div>
+      <div><label>Language and country<span class="hint">Google News edition: language, country, edition</span></label><div style="display:flex;gap:8px"><input id="n_hl" value="${esc(cfg.hl)}"><input id="n_gl" value="${esc(cfg.gl)}"><input id="n_ceid" value="${esc(cfg.ceid)}"></div></div>
+      <div class="full"><label>Extra topics to watch<span class="hint">Comma separated. Tracked even if you have no posts in them yet.</span></label><input id="n_extra" value="${esc(cfg.extra.join(', '))}"></div>
+      <div class="full"><label>Topics to skip<span class="hint">Comma separated.</span></label><input id="n_dis" value="${esc(cfg.disabled.join(', '))}"></div>
+      <div class="full"><label>Search words per topic<span class="hint">One per line, like: Jobs = remote jobs hiring Nigeria</span></label><textarea class="code" id="n_q" rows="6">${esc(Object.entries(cfg.queries).map(([k, v]) => k + ' = ' + v).join('\n'))}</textarea></div>
+    </div></details>
+    <p style="margin:16px 0 0"><button class="btn p" id="nsave">Save settings</button></p></div>
+    <details class="card sect"><summary><h3>Run history</h3></summary><table class="resp" style="margin-top:8px"><tr><th>When</th><th>Started by</th><th>Posts written</th><th>Stories</th></tr>${runs.map(r => `<tr><td>${new Date(r.at).toLocaleString()}</td><td class="mu">${/^manual/.test(r.trigger) ? 'You' : 'Schedule'}</td><td>${(r.posts || []).filter(x => x.created).length}</td><td class="mu">${r.fatal ? 'Could not run' : (r.total - r.failed) + ' of ' + r.total + ' topics fetched'}</td></tr>`).join('') || '<tr><td class="mu">No runs yet.</td></tr>'}</table></details>`;
+  $('#run').onclick = e => busy(e.currentTarget, async () => { toast('Running… this can take up to a minute.'); const r = await api('news/run', { method: 'POST' }); if (!r.ok) throw new Error(r.error || 'Run failed'); const n = (r.run?.posts || []).filter(x => x.created).length; toast(r.skipped ? 'Another run is already in progress.' : n ? `Done: ${n} new post${n > 1 ? 's' : ''} written.` : 'Done: no new posts this time (no big enough fresh story).'); refreshDraftBadge(); viewNews(); });
+  $('#tai').onclick = e => busy(e.currentTarget, async () => { const r = await api('news/test-ai', { method: 'POST' }); if (r.ok) toast(`AI writer is working (answered in ${(r.ms / 1000).toFixed(1)}s).`); else toast('AI writer problem: ' + r.error, true); });
   $('#nsave').onclick = e => busy(e.target, async () => {
     const queries = {}; $('#n_q').value.split('\n').forEach(l => { const i = l.indexOf('='); if (i > 0) queries[l.slice(0, i).trim()] = l.slice(i + 1).trim(); });
     await api('news/config', { method: 'PUT', body: { enabled: $('#n_enabled').value === 'true', autopost: { enabled: $('#a_on').value === 'true', publish: $('#a_pub').value === 'true', perCategoryPerDay: +$('#a_max').value, minScore: +$('#a_min').value }, sources: $('#n_src').value.split(','), window: $('#n_window').value.trim(), perCategory: +$('#n_per').value, maxAgeDays: +$('#n_age').value, hl: $('#n_hl').value.trim(), gl: $('#n_gl').value.trim(), ceid: $('#n_ceid').value.trim(), extra: $('#n_extra').value, disabled: $('#n_dis').value, queries } });
     toast('Saved. Applies from the next run.');
   });
 }
-
 
 async function boot() {
   ME = await api('me').catch(() => ({}));

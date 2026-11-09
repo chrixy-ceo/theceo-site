@@ -30,7 +30,7 @@ header.sh2{flex-wrap:nowrap;gap:10px}header.sh2 .bn{margin-right:auto;min-width:
 const R=document.documentElement;try{R.dataset.theme=localStorage.th||(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}catch(e){}
 document.addEventListener('click',e=>{if(e.target.closest('#th2')){R.dataset.theme=R.dataset.theme=='dark'?'light':'dark';try{localStorage.th=R.dataset.theme}catch(x){}}});
 document.querySelectorAll('[data-share]').forEach(a=>a.href='https://wa.me/?text='+encodeURIComponent(document.title+' '+location.href));
-document.querySelectorAll('[data-dl]').forEach(e=>{const d=Math.ceil((new Date(e.dataset.dl)-new Date())/864e5);e.textContent=d>0?d+' days left':'Closed'});
+document.querySelectorAll('[data-dl]').forEach(e=>{if(!e.dataset.dl){e.textContent='Open';return}const d=Math.ceil((new Date(e.dataset.dl)-new Date())/864e5);e.textContent=d>0?d+' days left':'Closed'});
 addEventListener('scroll',()=>{const p=document.getElementById('pg');if(p&&document.querySelector('.ar2'))p.style.width=scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight)*100+'%'});
 </script><script is:inline>
 document.addEventListener('click',e=>{const h=document.querySelector('.sh2');if(!h)return;const b=e.target.closest('#mb');if(b){const o=h.classList.toggle('open');b.setAttribute('aria-expanded',o)}else if(!e.target.closest('.sn')){h.classList.remove('open');const m=document.getElementById('mb');if(m)m.setAttribute('aria-expanded','false')}});

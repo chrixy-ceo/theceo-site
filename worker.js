@@ -1,9 +1,10 @@
 // Serves the site, the /administrator CMS (content in D1, media in R2) and the hourly auto-post cron.
 import adminHtml from './worker/admin.html';
 import astro from './dist/_worker.js/index.js';
-import { login, readSession, clearSession, sameOrigin, authConfigured } from './worker/auth.js';
+import { login, readSession, clearSession, sameOrigin, authConfigured, changePassword, accountInfo } from './worker/auth.js';
 import { listDir, listItems, readFile, writeFile, deleteFile, recentCommits, serveMedia, HttpError } from './worker/db.js';
 import { ensureDatabase } from './worker/bootstrap.js';
+import { testAI } from './worker/autopost.js';
 import { runNews, newsStatus, getConfig, saveConfig } from './worker/news.js';
 
 const SEC_HEADERS = {
@@ -56,7 +57,7 @@ async function admin(request, env, ctx, url) {
   if (route === 'logout') return json({ ok: true }, 200, { 'Set-Cookie': clearSession() });
 
   const session = await readSession(request, env);
-  if (route === 'me') return json({ user: session?.u || null, configured: authConfigured(env), db: Boolean(env.DB), media: Boolean(env.MEDIA || env.FILES), kv: Boolean(env.NEWS) });
+  if (route === 'me') return json({ user: session?.u || null, configured: await authConfigured(env), db: Boolean(env.DB), media: Boolean(env.MEDIA || env.FILES), kv: Boolean(env.NEWS) });
   if (!session) return json({ error: 'Please sign in.' }, 401);
 
   let body = {};
@@ -68,10 +69,16 @@ async function admin(request, env, ctx, url) {
     case 'GET file': return json(await readFile(env, url.searchParams.get('path')));
     case 'PUT file': return json(await writeFile(env, body, session.u));
     case 'DELETE file': return json(await deleteFile(env, body, session.u));
+    case 'GET account': return json(await accountInfo(env));
+    case 'POST account/password': {
+      const r = await changePassword(request, env, session, body);
+      return r.ok ? json({ ok: true }, 200, { 'Set-Cookie': r.cookie }) : json({ error: r.error }, r.status);
+    }
     case 'GET commits': return json(await recentCommits(env));
     case 'GET news/status': return json(await newsStatus(env));
     case 'GET news/config': return json(await getConfig(env));
     case 'PUT news/config': return json(await saveConfig(env, body));
+    case 'POST news/test-ai': return json(await testAI(env));
     case 'POST news/run': return json(await runNews(env, { trigger: 'manual:' + session.u, force: true }));
   }
   return json({ error: 'Not found.' }, 404);

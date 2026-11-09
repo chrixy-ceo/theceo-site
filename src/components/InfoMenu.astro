@@ -1,6 +1,8 @@
 ---
-import { ops, CC } from '../lib/ops.js';
-import { posts } from '../lib/posts.js';
+import { getOps, CC } from '../lib/ops.js';
+const ops = getOps();
+import { getPosts } from '../lib/posts.js';
+const posts = getPosts();
 const { active = '' } = Astro.props;
 const list = Object.keys(CC).filter((k) => ops.some((o) => o.category === k));
 ---

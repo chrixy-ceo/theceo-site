@@ -1,5 +1,5 @@
 ---
-import site from '../content/site.json';
+import { site } from '../lib/content.js';
 const on = site.ads_enabled && site.adsense_client && site.ad_slot;
 ---
 {on && <div class="adw"><ins class="adsbygoogle" style="display:block" data-ad-client={site.adsense_client} data-ad-slot={site.ad_slot} data-ad-format="auto" data-full-width-responsive="true"></ins><script is:inline>(adsbygoogle=window.adsbygoogle||[]).push({});</script></div>}

@@ -1,6 +1,8 @@
 ---
-import { cats } from '../lib/posts.js';
-import { ops } from '../lib/ops.js';
+import { getCats } from '../lib/posts.js';
+const cats = getCats();
+import { getOps } from '../lib/ops.js';
+const ops = getOps();
 const { active = '' } = Astro.props;
 ---
 {cats.length > 0 && <div class="fl cmenu" role="group" aria-label="Blog menu"><a href="/blog/" class={active === '' ? 'on' : ''}>All posts</a>{cats.map((c) => <a href={`/blog/category/${c.slug}/`} class={active === c.slug ? 'on' : ''}>{c.name}</a>)}{ops.length > 0 && <a href="/infobytes/">Infobytes →</a>}</div>}

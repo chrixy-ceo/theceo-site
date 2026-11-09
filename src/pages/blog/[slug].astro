@@ -1,20 +1,22 @@
 ---
+import { renderMarkdown } from '../../lib/content.js';
 import Shell from '../../layouts/Shell.astro';
 import Cover from '../../components/Cover.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import Newsletter from '../../components/Newsletter.astro';
 import BlogMenu from '../../components/BlogMenu.astro';
-import { posts, fdate, slugify } from '../../lib/posts.js';
-export function getStaticPaths() { return posts.map((p, i) => ({ params: { slug: p.slug }, props: { p, i } })); }
-const { p, i } = Astro.props;
-const { Content } = p;
+import { getPosts, fdate, slugify } from '../../lib/posts.js';
+const posts = getPosts();
+const i = posts.findIndex((x) => x.slug === Astro.params.slug);
+const p = posts[i];
+if (!p) return Astro.rewrite('/404');
 ---
 <Shell title={p.title} desc={p.description || p.excerpt || ''} image={p.og_image || p.image} type="article" active="blog">
 <BlogMenu active={slugify(p.category)} />
 <a class="bk" href="/blog/">← Back to Blog</a>
 <Cover img={p.image} i={i} wide={true} />
 <AdSlot />
-<article class="ar2"><small>{p.category}</small><h1>{p.title}</h1><p class="meta">{fdate(p.date)} · {p.mins} min read</p><Content /><div class="sh"><a class="btn p" data-share target="_blank" rel="noopener" href="#">Share on WhatsApp</a></div></article>
+<article class="ar2"><small>{p.category}</small><h1>{p.title}</h1><p class="meta">{fdate(p.date)} · {p.mins} min read</p><Fragment set:html={renderMarkdown(p.body)} /><div class="sh"><a class="btn p" data-share target="_blank" rel="noopener" href="#">Share on WhatsApp</a></div></article>
 <Newsletter where="blog" />
 <AdSlot />
 </Shell>

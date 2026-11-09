@@ -4,12 +4,18 @@ import Cover from '../../../../components/Cover.astro';
 import AdSlot from '../../../../components/AdSlot.astro';
 import Newsletter from '../../../../components/Newsletter.astro';
 import BlogMenu from '../../../../components/BlogMenu.astro';
-import site from '../../../../content/site.json';
-import { posts, cats, fdate, slugify } from '../../../../lib/posts.js';
-export function getStaticPaths({ paginate }) {
-  return cats.flatMap((c) => paginate(posts.filter((p) => slugify(p.category) === c.slug), { params: { cat: c.slug }, props: { cat: c }, pageSize: 6 }));
-}
-const { page, cat } = Astro.props;
+import { site } from '../../../../lib/content.js';
+import { getPosts, getCats, fdate, slugify } from '../../../../lib/posts.js';
+const posts = getPosts();
+const cats = getCats(posts);
+const cat = cats.find((c) => c.slug === Astro.params.cat);
+if (!cat) return Astro.rewrite('/404');
+const all = posts.filter((p) => slugify(p.category) === cat.slug);
+const SIZE = 6, lastPage = Math.max(1, Math.ceil(all.length / SIZE));
+const currentPage = Astro.params.page ? Number(Astro.params.page) : 1;
+if (!Number.isInteger(currentPage) || currentPage < 1 || currentPage > lastPage) return Astro.rewrite('/404');
+const root = `/blog/category/${cat.slug}`;
+const page = { data: all.slice((currentPage - 1) * SIZE, currentPage * SIZE), currentPage, lastPage, url: { prev: currentPage > 1 ? (currentPage === 2 ? root : `${root}/${currentPage - 1}`) : undefined, next: currentPage < lastPage ? `${root}/${currentPage + 1}` : undefined } };
 const base = `/blog/category/${cat.slug}/`;
 const href = (i) => (i == 1 ? base : `${base}${i}/`);
 ---

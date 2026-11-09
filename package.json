@@ -4,11 +4,21 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+    "build": "astro build && printf '_worker.js\\n_routes.json\\n' > dist/.assetsignore",
+    "preview": "astro preview",
+    "seed": "node scripts/seed-d1.mjs",
+    "db:migrate": "wrangler d1 migrations apply DB --remote",
+    "deploy": "npm run build && wrangler deploy && wrangler d1 migrations apply DB --remote",
+    "seed:media": "node scripts/seed-r2.mjs",
+    "cf:deploy": "wrangler deploy && wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
     "astro": "^5.0.0",
-    "@astrojs/sitemap": "^3.0.0"
+    "js-yaml": "^4.3.2",
+    "marked": "^15.0.12"
+  },
+  "devDependencies": {
+    "wrangler": "^4.158.0"
   }
 }

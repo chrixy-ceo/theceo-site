@@ -1,0 +1,6 @@
+.astro
+.dev.vars
+.wrangler
+dist
+node_modules
+wrangler.test.jsonc

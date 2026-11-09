@@ -1,7 +1,8 @@
 ---
+import { projects } from '../../lib/content.js';
 import Shell from '../../layouts/Shell.astro';
-export function getStaticPaths() { const m = import.meta.glob('../../content/projects/*.json', { eager: true }); return Object.entries(m).map(([f, x]) => ({ params: { slug: f.split('/').pop().replace('.json', '') }, props: { p: x.default } })); }
-const { p } = Astro.props;
+const p = projects.find((x) => x.slug === Astro.params.slug);
+if (!p) return Astro.rewrite('/404');
 const CAT = { analysis: 'Analysis project', automation: 'Automation project', other: 'Project' };
 ---
 <Shell title={p.title} desc={p.description} image={p.og_image || p.cover_image} type="article" ads={false}>

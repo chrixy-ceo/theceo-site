@@ -1,15 +1,16 @@
 ---
+import { projects, experience, certifications } from '../lib/content.js';
 import '../styles/site.css';
-import s from '../content/settings.json';
-import about from '../content/about.json';
-import sv from '../content/services.json';
-import st from '../content/stack.json';
-import site from '../content/site.json';
+import { settings as s } from '../lib/content.js';
+import { about } from '../lib/content.js';
+import { services as sv } from '../lib/content.js';
+import { stack as st } from '../lib/content.js';
+import { site } from '../lib/content.js';
 import Meta from '../components/Meta.astro';
 const g = (m) => Object.values(m).map((x) => x.default);
-const proj = Object.entries(import.meta.glob('../content/projects/*.json', { eager: true })).map(([f, x]) => ({ ...x.default, slug: f.split('/').pop().replace('.json', '') }));
-const exp = g(import.meta.glob('../content/experience/*.json', { eager: true }));
-const cer = g(import.meta.glob('../content/certifications/*.json', { eager: true }));
+const proj = projects;
+const exp = experience;
+const cer = certifications;
 const CATS = [['Analysis projects', 'analysis'], ['Automation projects', 'automation'], ['Other projects built', 'other']];
 const W = CATS.map(([t, k]) => [t, proj.filter((x) => x.category == k).sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))).map((x) => [x.title, x.description, x.tools || [], '/projects/' + x.slug + '/', x.cover_image || '', x.client_logo || ''])]);
 const EX = exp.map((e) => [e.role, e.org, e.start || '', e.end || '', e.description || '', e.org_logo || '']);

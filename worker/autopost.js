@@ -10,6 +10,7 @@
 import { writeFile } from './db.js';
 import { store } from './store.js';
 import { autoOpportunities } from './infobytes.js';
+import { aiRun, aiUsage, DAILY_BUDGET } from './ai.js';
 
 const KEY_USED = 'autopost:used';
 const KEY_FP = 'autopost:fingerprints';
@@ -43,7 +44,7 @@ function cosine(a, b) {
 }
 
 async function embed(env, texts) {
-  const r = await env.AI.run(EMBED, { text: texts.map((t) => plain(t).slice(0, 2000)) });
+  const r = await aiRun(env, EMBED, { text: texts.map((t) => plain(t).slice(0, 2000)) });
   return r.data;
 }
 
@@ -97,7 +98,7 @@ Otherwise write an ORIGINAL post in your own words. Do not reuse sentences or ph
 Format: ${FORMATS[format]}
 Length: 350-550 words. Plain, warm British English. No hype, no clichés like "in today's fast-paced world". Do not repeat the title in the body. End by telling readers what to watch for or do next.${retryNote ? '\n\nIMPORTANT: ' + retryNote : ''}
 Return JSON only: {"title": "...", "description": "one sentence under 160 characters", "body": "markdown"}`;
-  const res = await env.AI.run(WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 1600, temperature: 0.7 });
+  const res = await aiRun(env, WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 1600, temperature: 0.7 });
   const json = JSON.parse((String(res?.response ?? '').match(/\{[\s\S]*\}/) || [])[0]);
   if (json?.skip) return { skip: true };
   if (!json?.title || !json?.body || json.body.length < 600) throw new Error('AI output too short');
@@ -105,11 +106,11 @@ Return JSON only: {"title": "...", "description": "one sentence under 160 charac
 }
 
 // Dispatcher: Infobytes opportunities, blog articles, or both (admin setting).
-export async function autoPost(env, cfg, categories) {
+export async function autoPost(env, cfg, categories, budget) {
   if (!cfg.autopost?.enabled || !env.DB) return [];
   const target = cfg.autopost.target || 'infobytes';
   const out = [];
-  if (target !== 'blog') out.push(...await autoOpportunities(env, cfg, categories));
+  if (target !== 'blog') out.push(...await autoOpportunities(env, cfg, categories, budget));
   if (target !== 'infobytes') out.push(...await autoBlog(env, cfg, categories));
   return out;
 }
@@ -201,14 +202,15 @@ async function autoBlog(env, cfg, categories) {
 // Quick health check for the AI writer and the duplicate checker (used by the admin's Test button).
 export async function testAI(env) {
   if (!env.AI) return { ok: false, error: 'Workers AI is not connected to this Worker.' };
+  if ((await aiUsage(env)) >= DAILY_BUDGET) return { ok: false, error: `Today's free AI budget is used up (${DAILY_BUDGET} of 10,000 neurons). It resets at midnight UTC (1am in Nigeria).` };
   const t = Date.now();
   try {
-    const r = await env.AI.run(WRITER, { messages: [{ role: 'user', content: 'Reply with exactly: ready' }], max_tokens: 10 });
-    const e = await env.AI.run(EMBED, { text: ['test'] });
+    const r = await aiRun(env, WRITER, { messages: [{ role: 'user', content: 'Reply with exactly: ready' }], max_tokens: 10 });
+    const e = await aiRun(env, EMBED, { text: ['test'] });
     const reply = String(r?.response || '').trim();
     if (!reply) throw new Error('The writer returned an empty reply.');
     if (!e?.data?.[0]?.length) throw new Error('The duplicate checker returned no data.');
-    return { ok: true, ms: Date.now() - t, reply: reply.slice(0, 40) };
+    return { ok: true, ms: Date.now() - t, reply: reply.slice(0, 40), used: Math.round(await aiUsage(env)), budget: DAILY_BUDGET };
   } catch (err) {
     return { ok: false, ms: Date.now() - t, error: String(err?.message || err) };
   }

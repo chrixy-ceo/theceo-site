@@ -60,9 +60,10 @@ export async function saveConfig(env, cfg) {
   return clean;
 }
 
-async function fetchWithRetry(url, { tries = 3, timeout = 10000 } = {}) {
+async function fetchWithRetry(url, { tries = 2, timeout = 10000, budget } = {}) {
   let lastErr;
   for (let i = 0; i < tries; i++) {
+    if (budget) { if (budget.used >= budget.max) throw new Error('request limit for this run'); budget.used++; }
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeout);
     try {
@@ -138,7 +139,7 @@ export function parseRss(xml) {
 
 const key = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 90);
 
-async function collect(cat, cfg, previous) {
+async function collect(cat, cfg, previous, budget = { used: 0, max: 45 }) {
   const terms = (cfg.queries[cat] || DEFAULT_CONFIG.queries[cat] || cat);
   const gq = terms + (cfg.window ? ` when:${cfg.window}` : '');
   const gUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(gq)}&hl=${cfg.hl}&gl=${cfg.gl}&ceid=${encodeURIComponent(cfg.ceid)}`;
@@ -146,8 +147,8 @@ async function collect(cat, cfg, previous) {
   const sources = cfg.sources || DEFAULT_CONFIG.sources;
   // Both sources in parallel; the category only fails if every source fails.
   const settled = await Promise.allSettled([
-    sources.includes('google') ? fetchWithRetry(gUrl).then(parseRss) : Promise.resolve([]),
-    sources.includes('bing') ? fetchWithRetry(bUrl).then(bingParse) : Promise.resolve([]),
+    sources.includes('google') ? fetchWithRetry(gUrl, { budget }).then(parseRss) : Promise.resolve([]),
+    sources.includes('bing') ? fetchWithRetry(bUrl, { budget }).then(bingParse) : Promise.resolve([]),
   ]);
   if (settled.every((r) => r.status === 'rejected')) throw settled[0].reason;
   const fresh = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
@@ -197,7 +198,9 @@ export async function runNews(env, { trigger = 'cron', force = false } = {}) {
     const own = [...(target !== 'blog' ? await opportunityCategories(env) : []), ...(target !== 'infobytes' ? await blogCategories(env) : [])];
     const names = [...new Set([...own, ...cfg.extra])].filter((c) => !cfg.disabled.includes(c));
     const prev = (await store(env).get(KEY_DATA, 'json')) || { categories: {} };
-    const results = await pool(names, 4, (name) => collect(name, cfg, prev.categories[slugify(name)]?.items));
+    // Free plan: at most 50 outside requests per run. Story collection and posting share this budget.
+    const budget = { used: 0, max: 45 };
+    const results = await pool(names, 4, (name) => collect(name, cfg, prev.categories[slugify(name)]?.items, budget));
 
     const categories = {};
     const report = [];
@@ -219,7 +222,7 @@ export async function runNews(env, { trigger = 'cron', force = false } = {}) {
     await store(env).put(KEY_DATA, JSON.stringify(data));
 
     let posts = [];
-    try { posts = await autoPost(env, cfg, categories); } catch (e) { posts = [{ error: String(e?.message || e) }]; console.error('autopost_failed', e?.stack || e); }
+    try { posts = await autoPost(env, cfg, categories, budget); } catch (e) { posts = [{ error: String(e?.message || e) }]; console.error('autopost_failed', e?.stack || e); }
     const run = { id: runId, trigger, at: new Date(started).toISOString(), ms: Date.now() - started, ok: report.every((r) => r.ok), total: report.length, failed: report.filter((r) => !r.ok).length, report, posts };
     const runs = ((await store(env).get(KEY_RUNS, 'json')) || []).slice(0, 47);
     await store(env).put(KEY_RUNS, JSON.stringify([run, ...runs]));

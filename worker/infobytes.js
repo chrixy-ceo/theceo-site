@@ -14,8 +14,7 @@
 import { writeFile } from './db.js';
 import { store } from './store.js';
 
-const WRITER = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
-const EMBED = '@cf/baai/bge-base-en-v1.5';
+import { aiRun, AIBudgetError, WRITER, SCREENER, EMBED } from './ai.js';
 const KEY_USED = 'autopost:used';
 const KEY_FP = 'autopost:fp:ops';
 const SAME = 0.86;           // similarity at or above this = already listed
@@ -31,7 +30,9 @@ const fmOf = (body) => { const fm = (body.match(/^---\r?\n([\s\S]*?)\r?\n---/) |
 const decode = (s) => String(s || '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n));
 
 function cosine(a, b) { let d = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; } return d / (Math.sqrt(x * y) || 1); }
-const embed = async (env, texts) => (await env.AI.run(EMBED, { text: texts.map((t) => plain(t).slice(0, 2000)) })).data;
+const embed = async (env, texts) => (await aiRun(env, EMBED, { text: texts.map((t) => plain(t).slice(0, 2000)) })).data;
+// Headlines that sound like an open call. Anything else is skipped without opening the page or using AI.
+const CALL = /\b(apply|applications?|call for|calls for|scholarships?|fellowships?|grants?|internships?|vacanc(y|ies)|hiring|recruit(ment|ing)|job opening|now open|deadline|fully[- ]funded|bootcamp|programme|program|training|accelerator|challenge|competition|award|bursary|funding|opportunit(y|ies))\b/i;
 const round = (v) => v.map((x) => Math.round(x * 1e4) / 1e4);
 
 // Share of the draft's 8-word phrases that appear word-for-word in the source page.
@@ -85,6 +86,17 @@ async function readPage(url) {
   } finally { clearTimeout(t); }
 }
 
+// Cheap first check with a small model: is this one open opportunity people can apply for?
+async function screen(env, { page, category }) {
+  const prompt = `Today is ${new Date().toISOString().slice(0, 10)}. Read this web page and answer in JSON only.
+Is it about ONE specific ${category.toLowerCase()} opportunity that people can still apply for now (not news about winners, not a closed call, not a general article, not a list of many opportunities)?
+Reply {"ok": true} or {"ok": false, "reason": "a few words"}.
+PAGE:
+${page.text.slice(0, 3500)}`;
+  const res = await aiRun(env, SCREENER, { messages: [{ role: 'user', content: prompt }], max_tokens: 60, temperature: 0 });
+  try { return JSON.parse((String(res?.response ?? '').match(/\{[\s\S]*?\}/) || [])[0]); } catch { return { ok: true }; }
+}
+
 async function extract(env, { page, category, story, retryNote }) {
   const today = new Date().toISOString().slice(0, 10);
   const applyish = page.links.filter((l) => /apply|application|register|registration|portal|submit|form|career|job|official/i.test(l.text + ' ' + l.href)).slice(0, 25);
@@ -115,7 +127,7 @@ If yes, return JSON with ONLY facts stated on the page (use "" or [] when not st
  "tip": "one practical tip for applicants, based on the page"}
 Write in plain, warm British English, in your own words (do not copy sentences). No hype.${retryNote ? '\nIMPORTANT: ' + retryNote : ''}
 Return JSON only.`;
-  const res = await env.AI.run(WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 1800, temperature: 0.3 });
+  const res = await aiRun(env, WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 1500, temperature: 0.3 });
   return JSON.parse((String(res?.response ?? '').match(/\{[\s\S]*\}/) || [])[0]);
 }
 
@@ -147,8 +159,10 @@ export async function opportunityCategories(env) {
   return [...new Set(results.map((r) => fmOf(r.body).category).filter(Boolean))];
 }
 
-export async function autoOpportunities(env, cfg, categories) {
+export async function autoOpportunities(env, cfg, categories, budget = { used: 0, max: 45 }) {
   const out = [];
+  const MAX_PER_RUN = 2; let written = 0;
+  const spend = (n) => { if (budget.used + n > budget.max) return false; budget.used += n; return true; };
   if (!env.AI) return [{ skipped: 'Workers AI is not connected, so no opportunities were written' }];
   const { results } = await env.DB.prepare(`SELECT path, body, updated_by, updated_at FROM content WHERE path LIKE '${DIR}/%.md'`).all();
   const existing = results.map((r) => ({ ...r, fm: fmOf(r.body) }));
@@ -162,16 +176,23 @@ export async function autoOpportunities(env, cfg, categories) {
   const missing = existing.filter((r) => !have.has(r.path)).slice(0, 40);
   if (missing.length) { const v = await embed(env, missing.map((r) => `${r.fm.title}. ${r.fm.organization || ''}. ${r.body.replace(/^---[\s\S]*?---/, '').slice(0, 1000)}`)); missing.forEach((r, i) => fps.push({ path: r.path, v: round(v[i]) })); }
   const live = new Set(existing.map((r) => r.path)); fps = fps.filter((f) => live.has(f.path));
+  const finish = async () => { await Promise.all([store(env).put(KEY_USED, JSON.stringify([...used].slice(-3000))), store(env).put(KEY_FP, JSON.stringify(fps.slice(-500)))]); return out; };
 
   const since = Date.now() - 864e5;
-  for (const c of Object.values(categories)) {
-    if (!opCats.has(c.name) || cfg.disabled.includes(c.name)) continue;
+  const list = Object.values(categories).filter((c) => opCats.has(c.name) && !cfg.disabled.includes(c.name));
+  const shift = new Date().getUTCHours() % Math.max(1, list.length);
+  const order = [...list.slice(shift), ...list.slice(0, shift)];
+  for (const c of order) {
+    if (written >= MAX_PER_RUN) { out.push({ category: c.name, skipped: 'run limit reached, next run continues' }); continue; }
+    if (budget.used >= budget.max) { out.push({ category: c.name, skipped: 'request limit for this run reached, next run continues' }); continue; }
     const today = existing.filter((r) => r.updated_by === 'autopost' && r.fm.category === c.name && new Date(r.updated_at).getTime() >= since).length;
     if (today >= cfg.autopost.perCategoryPerDay) { out.push({ category: c.name, skipped: 'daily limit reached' }); continue; }
 
     // Only stories whose page we can read (direct links), fresh, not seen before.
     // Opportunities stay open for weeks, so freshness is not a gate here: the AI decides what is a real open call.
-    const cands = c.items.filter((i) => !used.has(key(i.title)) && !knownUrls.has(i.link)).slice(0, 6);
+    const fresh = c.items.filter((i) => !used.has(key(i.title)) && !knownUrls.has(i.link));
+    fresh.filter((i) => !CALL.test(i.title)).forEach((i) => used.add(key(i.title))); // not a call for applications: never look again
+    const cands = fresh.filter((i) => CALL.test(i.title)).slice(0, 3);
     if (!cands.length) { out.push({ category: c.name, skipped: 'no new stories this hour' }); continue; }
     const vecs = await embed(env, cands.map((s) => `${s.title}. ${s.summary || ''}`));
 
@@ -183,15 +204,22 @@ export async function autoOpportunities(env, cfg, categories) {
       let page;
       try {
         let link = story.link;
-        if (/news\.google\.com/.test(link)) { link = await resolveGoogle(link).catch(() => null); if (!link) throw new Error('Google did not reveal the article address'); }
+        const g = /news\.google\.com/.test(link);
+        if (!spend(g ? 3 : 1)) { out.push({ category: c.name, skipped: 'request limit for this run reached, next run continues' }); used.delete(key(story.title)); break; }
+        if (g) { link = await resolveGoogle(link).catch(() => null); if (!link) throw new Error('Google did not reveal the article address'); }
         if (knownUrls.has(link)) { out.push({ category: c.name, skipped: `already listed: ${story.title}` }); continue; }
         page = await readPage(link);
       } catch (e) { out.push({ category: c.name, skipped: `${story.title}: could not read page (${e.message})` }); continue; }
       if (knownUrls.has(page.url)) { out.push({ category: c.name, skipped: `already listed: ${story.title}` }); continue; }
 
+      // Cheap screen first; only real open calls go to the (more expensive) writer.
+      let sc;
+      try { sc = await screen(env, { page, category: c.name }); } catch (e) { if (e instanceof AIBudgetError) { out.push({ category: c.name, skipped: e.message }); used.delete(key(story.title)); return finish(); } sc = { ok: true }; }
+      if (sc && sc.ok === false) { out.push({ category: c.name, skipped: `${story.title}: not an open opportunity${sc.reason ? ' (' + sc.reason + ')' : ''}` }); continue; }
+
       let o, note = '', why = '';
       for (let attempt = 0; attempt < 2; attempt++) {
-        try { o = await extract(env, { page, category: c.name, story, retryNote: note }); } catch (e) { why = 'writer failed: ' + e.message; o = null; break; }
+        try { o = await extract(env, { page, category: c.name, story, retryNote: note }); } catch (e) { if (e instanceof AIBudgetError) { out.push({ category: c.name, skipped: e.message }); used.delete(key(story.title)); return finish(); } why = 'writer failed: ' + e.message; o = null; break; }
         if (!o?.ok) { why = 'not an open opportunity' + (o?.reason ? ` (${o.reason})` : ''); o = null; break; }
         o.about = (Array.isArray(o.about) ? o.about : [o.about]).filter(Boolean);
         for (const k of ['who_can_apply', 'what_you_get', 'how_to_apply']) o[k] = (Array.isArray(o[k]) ? o[k] : []).map(plain).filter(Boolean).slice(0, 12);
@@ -208,6 +236,12 @@ export async function autoOpportunities(env, cfg, categories) {
         o.copied = copied; break;
       }
       if (!o) { out.push({ category: c.name, skipped: `${story.title}: ${why}` }); continue; }
+
+      // Safety net: same organisation and mostly the same title words as an existing listing = duplicate.
+      const words = (t) => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(' ').filter((w) => w.length > 2 && !/^(the|and|for|with|programme|program|opportunity|applications?|open|20\d\d)$/.test(w)));
+      const ow = words(o.title + ' ' + o.organization);
+      const twin = existing.find((r) => { const ew = words((r.fm.title || '') + ' ' + (r.fm.organization || '')); let n = 0; for (const w of ow) if (ew.has(w)) n++; return ow.size && n / Math.min(ow.size, ew.size || 1) >= 0.6; });
+      if (twin) { out.push({ category: c.name, skipped: `already listed: ${o.title}` }); continue; }
 
       // The apply link must really be a link on the page; otherwise send readers to the source.
       const pageLinks = new Set(page.links.map((l) => l.href));
@@ -235,8 +269,8 @@ export async function autoOpportunities(env, cfg, categories) {
     try { await writeFile(env, { path, content: md }, 'autopost'); }
     catch { out.push({ category: c.name, skipped: `already listed: ${o.title}` }); continue; }
     fps.push({ path, v: round(made.vec) }); knownUrls.add(apply); knownUrls.add(page.url);
+    written++;
     out.push({ category: c.name, created: path, title: o.title, kind: 'opportunity', ai: true, deadline: o.deadline || 'none', official_apply: officialApply, score: story.score, copied: +o.copied.toFixed(2) });
   }
-  await Promise.all([store(env).put(KEY_USED, JSON.stringify([...used].slice(-3000))), store(env).put(KEY_FP, JSON.stringify(fps.slice(-500)))]);
-  return out;
+  return finish();
 }

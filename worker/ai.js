@@ -42,8 +42,20 @@ export async function aiRun(env, model, input) {
   // Count what this call cost, from the token usage Cloudflare reports (or an estimate).
   const [rin, rout] = RATES[model] || [27000, 205000];
   const tin = res?.usage?.prompt_tokens ?? Math.ceil(JSON.stringify(input).length / 4);
-  const tout = res?.usage?.completion_tokens ?? Math.ceil(String(res?.response || '').length / 4);
+  const tout = res?.usage?.completion_tokens ?? Math.ceil((typeof res?.response === 'string' ? res.response : JSON.stringify(res?.response ?? '')).length / 4);
   const cost = (tin * rin + tout * rout) / 1e6;
   await store(env).put(keyFor(), String(Math.round((used + cost) * 10) / 10));
   return res;
+}
+
+// Workers AI returns the answer either as text or, in JSON mode, already parsed. Accept both.
+export function parseAI(res) {
+  const r = res?.response ?? res?.result?.response;
+  if (r === undefined) throw new Error('AI returned no answer');
+  if (r && typeof r === 'object' && !Array.isArray(r)) return r;
+  const t = String(r ?? '').replace(/```(?:json)?/gi, '').trim();
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error('AI answer was not JSON: ' + t.slice(0, 120));
+  try { return JSON.parse(t.slice(a, b + 1)); }
+  catch { throw new Error('AI answer was cut off or malformed: ' + t.slice(0, 120)); }
 }

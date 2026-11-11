@@ -14,7 +14,7 @@
 import { writeFile } from './db.js';
 import { store } from './store.js';
 
-import { aiRun, AIBudgetError, WRITER, SCREENER, EMBED } from './ai.js';
+import { aiRun, AIBudgetError, WRITER, SCREENER, EMBED, parseAI } from './ai.js';
 const KEY_USED = 'autopost:used';
 const KEY_FP = 'autopost:fp:ops';
 const SAME = 0.86;           // similarity at or above this = already listed
@@ -58,10 +58,28 @@ async function resolveGoogle(link) {
 }
 
 // Fetch the source page: readable text, links and share image.
+const BROWSER = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-GB,en;q=0.9',
+};
+
+// Find another copy of the same story through Bing News (direct publisher links).
+async function findOnBing(title) {
+  const q = title.replace(/\s+-\s+[^-]+$/, '').slice(0, 150);
+  const xml = await (await fetch(`https://www.bing.com/news/search?q=${encodeURIComponent('"' + q + '"')}&format=rss`, { headers: BROWSER })).text();
+  for (const m of xml.matchAll(/<item>[\s\S]*?<link>([^<]+)<\/link>/g)) {
+    let link = m[1].replace(/&amp;/g, '&');
+    try { const u = new URL(link); if (u.searchParams.get('url')) link = u.searchParams.get('url'); } catch {}
+    if (/^https?:/.test(link) && !/bing\.com|news\.google/.test(link)) return link;
+  }
+  return null;
+}
+
 async function readPage(url) {
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 12000);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InfobytesBot/1.0; +https://theceo.dev)', Accept: 'text/html,application/xhtml+xml' } });
+    const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow', headers: BROWSER });
     if (!res.ok) throw new Error('page returned HTTP ' + res.status);
     if (!/html/i.test(res.headers.get('Content-Type') || '')) throw new Error('not an HTML page');
     const html = (await res.text()).slice(0, 600000);
@@ -94,7 +112,7 @@ Reply {"ok": true} or {"ok": false, "reason": "a few words"}.
 PAGE:
 ${page.text.slice(0, 3500)}`;
   const res = await aiRun(env, SCREENER, { messages: [{ role: 'user', content: prompt }], max_tokens: 60, temperature: 0 });
-  try { return JSON.parse((String(res?.response ?? '').match(/\{[\s\S]*?\}/) || [])[0]); } catch { return { ok: true }; }
+  try { return parseAI(res); } catch { return { ok: true }; }
 }
 
 async function extract(env, { page, category, story, retryNote }) {
@@ -127,8 +145,8 @@ If yes, return JSON with ONLY facts stated on the page (use "" or [] when not st
  "tip": "one practical tip for applicants, based on the page"}
 Write in plain, warm British English, in your own words (do not copy sentences). No hype.${retryNote ? '\nIMPORTANT: ' + retryNote : ''}
 Return JSON only.`;
-  const res = await aiRun(env, WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 1500, temperature: 0.3 });
-  return JSON.parse((String(res?.response ?? '').match(/\{[\s\S]*\}/) || [])[0]);
+  const res = await aiRun(env, WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.3, response_format: { type: 'json_object' } });
+  return parseAI(res);
 }
 
 // Build the body in the exact Infobytes template used by the hand-written listings.
@@ -201,15 +219,19 @@ export async function autoOpportunities(env, cfg, categories, budget = { used: 0
       used.add(key(story.title));
       const near = fps.reduce((m, f) => Math.max(m, cosine(vecs[i], f.v)), 0);
       if (near >= SAME) { out.push({ category: c.name, skipped: `already listed: ${story.title}`, similarity: +near.toFixed(3) }); continue; }
-      let page;
-      try {
-        let link = story.link;
-        const g = /news\.google\.com/.test(link);
-        if (!spend(g ? 3 : 1)) { out.push({ category: c.name, skipped: 'request limit for this run reached, next run continues' }); used.delete(key(story.title)); break; }
-        if (g) { link = await resolveGoogle(link).catch(() => null); if (!link) throw new Error('Google did not reveal the article address'); }
-        if (knownUrls.has(link)) { out.push({ category: c.name, skipped: `already listed: ${story.title}` }); continue; }
-        page = await readPage(link);
-      } catch (e) { out.push({ category: c.name, skipped: `${story.title}: could not read page (${e.message})` }); continue; }
+      let page, why0 = '';
+      const g = /news\.google\.com/.test(story.link);
+      if (!spend(g ? 3 : 1)) { out.push({ category: c.name, skipped: 'request limit for this run reached, next run continues' }); used.delete(key(story.title)); break; }
+      let link = story.link;
+      if (g) { link = await resolveGoogle(link).catch((e) => { why0 = 'Google: ' + e.message; return null; }); if (!link && !why0) why0 = 'Google did not reveal the article address'; }
+      if (link && knownUrls.has(link)) { out.push({ category: c.name, skipped: `already listed: ${story.title}` }); continue; }
+      if (link) { try { page = await readPage(link); } catch (e) { why0 = e.message; } }
+      // Second chance: the same story on another site, found through Bing News.
+      if (!page && spend(2)) {
+        try { const alt = await findOnBing(story.title); if (alt && alt !== link && !knownUrls.has(alt)) page = await readPage(alt); else if (!alt) why0 += '; no other copy found'; }
+        catch (e) { why0 += '; other copy: ' + e.message; }
+      }
+      if (!page) { out.push({ category: c.name, skipped: `${story.title}: could not read page (${why0 || 'unknown'})` }); continue; }
       if (knownUrls.has(page.url)) { out.push({ category: c.name, skipped: `already listed: ${story.title}` }); continue; }
 
       // Cheap screen first; only real open calls go to the (more expensive) writer.
@@ -269,6 +291,7 @@ export async function autoOpportunities(env, cfg, categories, budget = { used: 0
     try { await writeFile(env, { path, content: md }, 'autopost'); }
     catch { out.push({ category: c.name, skipped: `already listed: ${o.title}` }); continue; }
     fps.push({ path, v: round(made.vec) }); knownUrls.add(apply); knownUrls.add(page.url);
+    existing.push({ path, body: md, updated_by: 'autopost', updated_at: new Date().toISOString(), fm: { title: o.title, organization: o.organization, category: c.name } });
     written++;
     out.push({ category: c.name, created: path, title: o.title, kind: 'opportunity', ai: true, deadline: o.deadline || 'none', official_apply: officialApply, score: story.score, copied: +o.copied.toFixed(2) });
   }

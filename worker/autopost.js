@@ -10,7 +10,7 @@
 import { writeFile } from './db.js';
 import { store } from './store.js';
 import { autoOpportunities } from './infobytes.js';
-import { aiRun, aiUsage, DAILY_BUDGET } from './ai.js';
+import { aiRun, aiUsage, DAILY_BUDGET, parseAI } from './ai.js';
 
 const KEY_USED = 'autopost:used';
 const KEY_FP = 'autopost:fingerprints';
@@ -99,7 +99,7 @@ Format: ${FORMATS[format]}
 Length: 350-550 words. Plain, warm British English. No hype, no clichés like "in today's fast-paced world". Do not repeat the title in the body. End by telling readers what to watch for or do next.${retryNote ? '\n\nIMPORTANT: ' + retryNote : ''}
 Return JSON only: {"title": "...", "description": "one sentence under 160 characters", "body": "markdown"}`;
   const res = await aiRun(env, WRITER, { messages: [{ role: 'user', content: prompt }], max_tokens: 1600, temperature: 0.7 });
-  const json = JSON.parse((String(res?.response ?? '').match(/\{[\s\S]*\}/) || [])[0]);
+  const json = parseAI(res);
   if (json?.skip) return { skip: true };
   if (!json?.title || !json?.body || json.body.length < 600) throw new Error('AI output too short');
   return json;

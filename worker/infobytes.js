@@ -64,6 +64,25 @@ const BROWSER = {
   'Accept-Language': 'en-GB,en;q=0.9',
 };
 
+// Save our own copy of the share image, so it never breaks when the source site blocks
+// hotlinking or deletes it. Falls back to the original address if the download fails.
+async function saveImage(env, url, slug) {
+  if (!url) return '';
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': BROWSER['User-Agent'], Accept: 'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8' } }).finally(() => clearTimeout(t));
+    const type = (res.headers.get('Content-Type') || '').split(';')[0].trim();
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' }[type];
+    if (!res.ok || !ext) return url;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length < 1000 || bytes.length > 3 * 1024 * 1024) return url;
+    let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    const name = `ib-${slug.slice(0, 60)}.${ext}`;
+    await writeFile(env, { path: `public/uploads/${name}`, base64: btoa(bin) }, 'autopost');
+    return `/uploads/${name}`;
+  } catch { return url; }
+}
+
 // Find another copy of the same story through Bing News (direct publisher links).
 async function findOnBing(title) {
   const q = title.replace(/\s+-\s+[^-]+$/, '').slice(0, 150);
@@ -276,7 +295,7 @@ export async function autoOpportunities(env, cfg, categories, budget = { used: 0
     if (!made) continue;
 
     const { story, page, o, apply, officialApply } = made;
-    const image = page.image || '';
+    const image = page.image ? (spend(1) ? await saveImage(env, page.image, slugify(o.title) || 'opportunity') : page.image) : '';
     const fm = {
       title: o.title, category: c.name, organization: o.organization,
       deadline: o.deadline || '', location: o.location || '', type: o.type || OPPORTUNITY_TYPES[c.name] || 'Opportunity',

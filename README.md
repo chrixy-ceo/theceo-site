@@ -1,43 +1,64 @@
-# Christabel Oboh — website
+# The CEO site
 
-One site, three parts, one domain: the portfolio (`/`), the Blog (`/blog/`) and Infobytes (`/infobytes/`), plus About, Contact, Privacy, Terms and Disclaimer pages that AdSense expects.
+Welcome! This is the code behind my portfolio, blog, and Infobytes listings at [theceo.dev](https://theceo.dev). If you're helping me with the site, here's how it works and where to start.
 
-## Put it online with Cloudflare (Workers)
-1. Put the project on GitHub. If the files sit inside a folder in the repo, set that folder as the Root directory in Cloudflare.
-2. Cloudflare → Workers & Pages → Create → connect the repository. Build command `npm run build`, deploy command `npx wrangler deploy`. `wrangler.jsonc` and `worker.js` tell Cloudflare how to serve the site and run the editor sign-in.
-3. Add your domain: open the Worker → Settings → Domains & routes → Add → Custom domain → `theceo.dev` (the domain must be on Cloudflare).
-4. If your address is not `theceo.dev`, change it in `astro.config.mjs` and `public/robots.txt`.
+## How the site works
 
-## Nothing empty is shown to visitors
-- No ad boxes appear until you switch ads on (see below). The portfolio never shows ads.
-- The Blog says "New posts are on the way" until you publish a post. Infobytes says "No opportunities listed right now" until you add one. Add real posts before you share the links.
-- The Certifications and Experience tabs, and the CV button, only appear when they have content. Upload your CV in Site settings → Portfolio text, links and photo.
-- Want to see the design with sample content? Copy the files in `_samples/posts` and `_samples/opportunities` into `src/content/posts` and `src/content/opportunities`, then delete them before going live.
+I built the site with Astro and run it on Cloudflare Workers. Astro turns the site's content into pages, and the Worker serves those pages when someone visits. The site content is stored in Cloudflare D1, a small SQLite database.
 
-## AdSense
-1. Apply with your domain. In AdSense choose the **meta tag** verification method. Paste your publisher ID (`ca-pub-...`) into the editor under Site settings → Ads, contact and Blog / Infobytes settings. The meta tag then appears on every page without showing any ad.
-2. Once approved, create an ad unit in AdSense, paste its ID into "AdSense ad unit ID" and switch on "Show ads on Blog and Infobytes". Ads then appear only on blog posts, the blog list and Infobytes, never on the portfolio, About, Contact or policy pages.
-3. `/ads.txt` is generated for you from the publisher ID.
-4. For visitors in Europe and the UK, turn on Google's free consent message in AdSense (Privacy & messaging).
-5. The Privacy, Terms and Disclaimer pages are general starting texts. Read them and change anything that does not match how you work. They are not legal advice.
+I use the `/administrator` page to edit posts, opportunities, portfolio details, and other site content. Those edits go straight into the database and appear on the site without a code change or deployment. The files in `seed/content/` are starter content for a new database; they don't automatically update when I edit the live site.
 
-## Connect your newsletter (the box stays hidden until you do)
-The same newsletter box appears on the Blog and on Infobytes (with different wording), and the **Add to calendar** reminder appears on every Infobytes opportunity that has a deadline in the future.
-1. Create your list in your newsletter tool (Kit, beehiiv, MailerLite, Brevo and others have free plans).
-2. Find its **sign-up page link** (a hosted page or share link).
-3. In the editor go to Site settings → Ads, contact and Blog / Infobytes settings, paste it into **Newsletter: sign-up page link**, and save. The Subscribe button now opens that page.
-Optional: if your tool gives you a plain HTML form, paste the form's address into **form address** and its email field name into **email field name** to show an email box directly on the site. If the form needs extra hidden fields, use the sign-up page link instead.
-You can change the wording of both boxes in the same place.
+To change how the site looks or works, update the code in `src/`, `worker.js`, or `worker/`, then build and deploy it. Code changes and content edits are separate: code changes go through GitHub, while content edits in the admin do not.
 
-## Updating an existing site
-Upload the contents of this folder over your repository (drag everything inside the folder onto GitHub's Upload files page). Files with the same name are replaced, and new ones are added.
-`public/admin/config.yml` is deliberately left out of this folder, because it holds your own repository name and the sign-in settings. Your existing copy stays as it is. `config.example.yml` is the newest full version of that file: only copy it over `public/admin/config.yml` (and set the `repo:` line) if you want fields it contains that yours lacks, or when starting a new repository.
+## Admin access
 
-## The content editor
-Go to `https://theceo.dev/admin/` and sign in with GitHub. Sign-in is handled by `worker.js`. To switch it on:
-1. In `public/admin/config.yml` put your repository in the `repo:` line, for example `yourname/theceo-site`. If the project sits inside a folder in your repo, use `config-for-subfolder.yml` instead.
-2. Create a GitHub OAuth app (GitHub → Settings → Developer settings → OAuth Apps → New). Homepage URL `https://theceo.dev`, callback URL `https://theceo.dev/api/callback`.
-3. In Cloudflare open the Worker → Settings → Variables and secrets. Add `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`, both as **Secret** type, then redeploy.
+The editor is at [theceo.dev/administrator](https://theceo.dev/administrator). It uses a password, not GitHub sign-in. The initial login requires an `ADMIN_PASSWORD` secret in Cloudflare; the username is `admin` unless `ADMIN_USERNAME` has been set. Once signed in, I can change the username and password under **Account → Password & login**.
 
-## Working locally
-`npm install` then `npm run dev`. Design changes live in `src/styles/site.css` and the files in `src/`.
+Please don't put passwords or other secrets in this repository. `SESSION_SECRET` is also recommended in Cloudflare to sign admin sessions.
+
+## The hourly news and draft job
+
+Cloudflare is configured in this repository to run a scheduled job once an hour. It looks for stories in Google News and Bing News, sorts and saves them, then can use Cloudflare Workers AI to prepare new posts.
+
+The default settings are to make Infobytes opportunities and save them as **drafts**. They are not published automatically unless that setting is changed in the admin. You can also choose Blog or both, pause the job, or run it manually from **Auto-posting**.
+
+The automation tries to check that an opportunity is still open and that key details, such as the organisation, application link, and deadline, appear on the source page. Blog drafts are checked for similarity to existing posts. These checks help, but AI can still get things wrong, so please verify the source and details before publishing.
+
+If a draft doesn't appear, the Auto-posting page has run history and skip reasons. The job can also pause when it reaches its AI daily budget or request limits, or when a news source is unavailable.
+
+## Running and deploying the site
+
+You'll need Node.js installed. From the project folder:
+
+```sh
+npm install
+npm run dev
+```
+
+To build or deploy:
+
+```sh
+npm run build
+npm run deploy
+```
+
+`npm run deploy` builds the site and deploys the Worker. It needs access to the Cloudflare account and the required Cloudflare settings.
+
+If you update the starter content in `seed/content/`, run `npm run seed` to regenerate the seed files. This is for setting up new databases; it doesn't copy live admin edits back into the repository.
+
+## Cloudflare settings to check
+
+`wrangler.jsonc` shows the bindings this project expects, but it doesn't tell us exactly what is configured in the live Cloudflare account. Before setting up a deployment, check that:
+
+- The D1 binding `DB` points to the right database. The checked-in config names the database but is missing its `database_id`.
+- The `NEWS` KV namespace has an ID in the config. The `FILES` KV namespace is declared but its ID is missing.
+- The Worker has the `ADMIN_PASSWORD` secret. Add `SESSION_SECRET` too if possible.
+- The `AI` binding is enabled if you want AI drafts.
+
+The code can use an R2 bucket binding called `MEDIA` for uploads, but R2 isn't enabled in the checked-in config. It falls back to `FILES` KV storage. I can't confirm from this repository which settings are already configured for the live site.
+
+## GitHub access and pull requests
+
+The site editor and GitHub access are different things. Editing a post in the admin changes the live site's database; it doesn't need GitHub access. Changing the code does.
+
+Someone can have collaborator access to the repository and still need to make a pull request if branch rules require it. A pull request is just a way to propose and review code changes before they go into a branch. Coding agents often use a separate branch and open a PR as part of their workflow; that doesn't necessarily mean the person using the agent lacks access. To check who has access or what rules apply, look in the repository's **Settings → Collaborators** and **Rules / Branches**.

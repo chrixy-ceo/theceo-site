@@ -10,7 +10,7 @@ const SZ = 5, total = Math.max(1, Math.ceil(posts.length / SZ));
 const items = posts.slice((n - 1) * SZ, n * SZ);
 const feat = n == 1 ? items[0] : null, rest = feat ? items.slice(1) : items;
 const href = (i) => (i == 1 ? '/blog/' : `/blog/page/${i}/`);
-const pages = (() => { const keep = new Set([1, total, n - 1, n, n + 1]); if (n <= 3) [2, 3, 4].forEach((i) => keep.add(i)); if (n >= total - 2) [total - 1, total - 2, total - 3].forEach((i) => keep.add(i)); const out = []; let last = 0; for (let i = 1; i <= total; i++) { if (!keep.has(i)) continue; if (i - last > 1) out.push(0); out.push(i); last = i; } return out; })();
+const pages = (() => { const keep = new Set(total <= 4 ? [1, 2, 3, 4] : n <= 2 ? [1, 2, 3, total] : n >= total - 1 ? [1, total - 2, total - 1, total] : [1, n, n + 1, total]); const out = []; let last = 0; for (let i = 1; i <= total; i++) { if (!keep.has(i)) continue; if (i - last > 1) out.push(0); out.push(i); last = i; } return out; })();
 ---
 <h2>Blog</h2>
 <BlogMenu />

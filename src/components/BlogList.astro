@@ -10,6 +10,7 @@ const SZ = 5, total = Math.max(1, Math.ceil(posts.length / SZ));
 const items = posts.slice((n - 1) * SZ, n * SZ);
 const feat = n == 1 ? items[0] : null, rest = feat ? items.slice(1) : items;
 const href = (i) => (i == 1 ? '/blog/' : `/blog/page/${i}/`);
+const pages = (() => { const keep = new Set(total <= 4 ? [1, 2, 3, 4] : n <= 2 ? [1, 2, 3, total] : n >= total - 1 ? [1, total - 2, total - 1, total] : [1, n, n + 1, total]); const out = []; let last = 0; for (let i = 1; i <= total; i++) { if (!keep.has(i)) continue; if (i - last > 1) out.push(0); out.push(i); last = i; } return out; })();
 ---
 <h2>Blog</h2>
 <BlogMenu />
@@ -18,5 +19,5 @@ const href = (i) => (i == 1 ? '/blog/' : `/blog/page/${i}/`);
 <Newsletter where="blog" />
 <AdSlot />
 <div class="grid">{rest.map((p) => <a class="g bc" href={`/blog/${p.slug}/`}><Cover img={p.image} i={posts.indexOf(p)} /><small>{p.category}</small><h3>{p.title}</h3><span class="mt">{fdate(p.date)} · {p.mins} min read</span></a>)}</div>
-{total > 1 && <div class="pgr">{n > 1 ? <a class="pb" href={href(n - 1)}>← Prev</a> : <span class="pb" style="opacity:.35">← Prev</span>}{Array.from({ length: total }, (_, i) => <a class={'pb' + (i + 1 == n ? ' on' : '')} href={href(i + 1)}>{i + 1}</a>)}{n < total ? <a class="pb" href={href(n + 1)}>Next →</a> : <span class="pb" style="opacity:.35">Next →</span>}</div>}
+{total > 1 && <div class="pgr">{n > 1 ? <a class="pb" href={href(n - 1)} aria-label="Previous page">←<span class="pt"> Prev</span></a> : <span class="pb" style="opacity:.35">←<span class="pt"> Prev</span></span>}{pages.map((i) => i ? <a class={'pb' + (i == n ? ' on' : '')} href={href(i)} aria-current={i == n ? 'page' : undefined}>{i}</a> : <span class="pgd" aria-hidden="true">…</span>)}{n < total ? <a class="pb" href={href(n + 1)} aria-label="Next page"><span class="pt">Next </span>→</a> : <span class="pb" style="opacity:.35"><span class="pt">Next </span>→</span>}</div>}
 <AdSlot />

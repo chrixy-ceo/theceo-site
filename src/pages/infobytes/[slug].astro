@@ -3,7 +3,6 @@ import { renderMarkdown } from '../../lib/content.js';
 import Shell from '../../layouts/Shell.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import Newsletter from '../../components/Newsletter.astro';
-import InfoMenu from '../../components/InfoMenu.astro';
 import { getOps, CC, fdate } from '../../lib/ops.js';
 const ops = getOps();
 const o = ops.find((x) => x.slug === Astro.params.slug);
@@ -11,8 +10,7 @@ if (!o) return Astro.rewrite('/404');
 const col = CC[o.category] || '#14b8a6';
 ---
 <Shell title={o.title} desc={o.description || o.excerpt || ''} image={o.og_image || o.image} type="article" header={false} active="info">
-<div class="tb"><a class="bk" href="/infobytes/">← Back to Infobytes</a><button class="btn tgl" id="th2" aria-label="Toggle light and dark theme">◐</button></div>
-<InfoMenu active={o.category} />
+<div class="tb"><div class="crumb" role="navigation" aria-label="Breadcrumb"><a href="/infobytes/">← Infobytes</a><span>/</span><a href={`/infobytes/?cat=${o.category}`} style={`--c:${col}`}><i></i>{o.category}</a></div><button class="btn tgl" id="th2" aria-label="Toggle light and dark theme"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button></div>
 <div class="od" style={`--c:${col}`}>
 <article class="ar2"><div class="hi" style={`--c:${col}`}>{o.image ? <img class="th" src={o.image} alt="" /> : <div class="th ph3"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 17l5-5 4 4 3-3 6 5M8.5 9h.01"/></svg></div>}</div><small class="cat">{o.category}</small><h1>{o.title}</h1><p class="meta">{o.organization_logo && <img class="olg" src={o.organization_logo} alt="" />}{o.organization}</p><style is:global>.olg{height:22px;width:auto;vertical-align:middle;margin-right:8px;border-radius:6px}</style>
 <div class="rem" id="rem" hidden><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg></div><div class="rt"><b>Never miss this deadline <span class="nw">New</span></b><span>Add a reminder to your phone’s calendar.</span></div><div class="rb"><a class="btn p" id="gcal" target="_blank" rel="noopener" href="#">Google Calendar</a><a class="btn" id="ics" href="#">Apple / Outlook</a></div></div><Fragment set:html={renderMarkdown(o.body)} /></article>

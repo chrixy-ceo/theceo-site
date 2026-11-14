@@ -4,7 +4,6 @@ import Shell from '../../layouts/Shell.astro';
 import Cover from '../../components/Cover.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import Newsletter from '../../components/Newsletter.astro';
-import BlogMenu from '../../components/BlogMenu.astro';
 import { getPosts, fdate, slugify } from '../../lib/posts.js';
 const posts = getPosts();
 const i = posts.findIndex((x) => x.slug === Astro.params.slug);
@@ -12,8 +11,7 @@ const p = posts[i];
 if (!p) return Astro.rewrite('/404');
 ---
 <Shell title={p.title} desc={p.description || p.excerpt || ''} image={p.og_image || p.image} type="article" active="blog">
-<BlogMenu active={slugify(p.category)} />
-<a class="bk" href="/blog/">← Back to Blog</a>
+<div class="crumb" role="navigation" aria-label="Breadcrumb"><a href="/blog/">← Blog</a>{p.category && <><span>/</span><a href={`/blog/category/${slugify(p.category)}/`}>{p.category}</a></>}</div>
 <Cover img={p.image} i={i} wide={true} />
 <AdSlot />
 <article class="ar2"><small>{p.category}</small><h1>{p.title}</h1><p class="meta">{fdate(p.date)} · {p.mins} min read</p><Fragment set:html={renderMarkdown(p.body)} /><div class="sh"><a class="btn p" data-share target="_blank" rel="noopener" href="#">Share on WhatsApp</a></div></article>

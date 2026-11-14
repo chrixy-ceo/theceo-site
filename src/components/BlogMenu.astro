@@ -5,5 +5,5 @@ import { getOps } from '../lib/ops.js';
 const ops = getOps();
 const { active = '' } = Astro.props;
 ---
-{cats.length > 0 && <div class="fl cmenu" role="group" aria-label="Blog menu"><a href="/blog/" class={active === '' ? 'on' : ''}>All posts</a>{cats.map((c) => <a href={`/blog/category/${c.slug}/`} class={active === c.slug ? 'on' : ''}>{c.name}</a>)}{ops.length > 0 && <a href="/infobytes/">Infobytes →</a>}</div>}
+{cats.length > 0 && <div class="fl cmenu" role="group" aria-label="Blog menu"><a href="/blog/" class={active === '' ? 'on' : ''}>All posts</a>{cats.map((c) => <a href={`/blog/category/${c.slug}/`} class={active === c.slug ? 'on' : ''}>{c.name}</a>)}{ops.length > 0 && <a class="xl" href="/infobytes/">Infobytes →</a>}</div>}
 <style is:global>.cmenu{margin:0 0 26px}.cmenu a{display:inline-flex;align-items:center;gap:8px}.cmenu a i{width:8px;height:8px;border-radius:50%}</style>

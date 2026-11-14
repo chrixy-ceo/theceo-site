@@ -268,6 +268,17 @@ footer .legal{justify-content:flex-end}.lgl{margin:26px 0 6px}.adw{margin:22px 0
 .nw{display:inline-block;margin-left:6px;padding:2px 9px;border-radius:99px;background:var(--teal);color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:2px}
 .rb{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:860px){.nl{grid-template-columns:1fr;padding:22px 20px;gap:12px}.nlf{flex-direction:column}.nlf input{min-width:0;width:100%}.nl .btn{width:100%}.nlt h3{font-size:19px}.rb{width:100%}.rb .btn{flex:1}}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.ibtools{position:sticky;top:8px;z-index:30;display:grid;grid-template-columns:minmax(160px,220px) minmax(180px,1fr) auto auto;gap:10px;align-items:center;margin:0 0 24px;padding:10px;border:1px solid var(--ln);border-radius:20px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(16px);box-shadow:var(--sh)}
+.ibtools select,.ibtools input{width:100%;height:46px;padding:0 16px;border:1px solid var(--ln);border-radius:99px;background:var(--pn);color:var(--tx);font:500 14px var(--f)}
+.ibtools select{cursor:pointer}.ibtools input:focus,.ibtools select:focus{outline:2px solid var(--teal);border-color:transparent}
+.ibsearch-btn{height:46px;padding:0 20px}
+.ib-blog{padding:10px 12px;color:var(--mu);font-weight:600;white-space:nowrap}.ib-blog:hover{color:var(--teal)}
+.wa-channel{display:flex;justify-content:space-between;align-items:center;gap:20px;margin:36px 0;padding:24px 28px;border:1px solid var(--ln);border-radius:24px;background:var(--pn);box-shadow:var(--sh)}
+.wa-channel h2{margin:0 0 6px;font-size:clamp(20px,2.4vw,27px)}.wa-channel h2::after{display:none}
+.wa-channel p{color:var(--mu);font-size:14.5px}
+@media(max-width:600px){.ibtools{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px;border-radius:16px}.ibtools select,.ibtools input{height:44px;min-width:0}.ibtools select,.ib-blog{grid-column:1/-1}.ibsearch-btn{height:44px;padding:0 14px}.ib-blog{padding:4px 8px}.wa-channel{align-items:stretch;flex-direction:column;margin:28px 0;padding:20px}.wa-channel .btn{width:100%}}
 /* ---- category menus, breadcrumbs, pager ---- */
 .fl .xl{margin-left:auto;border-style:dashed}
 .crumb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14.5px;font-weight:600;color:var(--mu);margin:0 0 26px}

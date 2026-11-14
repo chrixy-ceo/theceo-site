@@ -3,8 +3,22 @@ import { getOps, CC } from '../lib/ops.js';
 const ops = getOps();
 import { getPosts } from '../lib/posts.js';
 const posts = getPosts();
-const { active = '' } = Astro.props;
+const { active = '', query = '', interactive = false } = Astro.props;
 const list = Object.keys(CC).filter((k) => ops.some((o) => o.category === k));
 ---
-{list.length > 0 && <div class="fl cmenu" role="group" aria-label="Infobytes menu"><a href="/infobytes/" class={active === '' ? 'on' : ''}>All opportunities</a>{list.map((k) => <a href={`/infobytes/?cat=${k}`} class={active === k ? 'on' : ''}><i style={`background:${CC[k]}`}></i>{k}</a>)}{posts.length > 0 && <a class="xl" href="/blog/">Blog →</a>}</div>}
-<style is:global>.cmenu{margin:0 0 26px}.cmenu a{display:inline-flex;align-items:center;gap:8px}.cmenu a i{width:8px;height:8px;border-radius:50%}</style>
+<form class="ibtools" action="/infobytes/" method="get" aria-label="Search and filter opportunities" data-live={interactive ? 'true' : undefined}>
+  <label class="sr-only" for="ib-category">Filter by category</label>
+  <select id="ib-category" name="cat" aria-label="Filter by category">
+    <option value="" selected={active === '' || active === 'All'}>All opportunities</option>
+    {list.map((category) => <option value={category} selected={active === category}>{category}</option>)}
+  </select>
+  <label class="sr-only" for="ib-search">Search opportunities</label>
+  <input id="ib-search" type="search" name="q" value={query} placeholder="Search opportunities" />
+  <button class="btn ibsearch-btn" type="submit">Search</button>
+  {posts.length > 0 && <a class="ib-blog" href="/blog/">Blog →</a>}
+</form>
+<script>
+  document.querySelectorAll('.ibtools:not([data-live]) select[name="cat"]').forEach((select) => {
+    select.addEventListener('change', () => select.form?.requestSubmit());
+  });
+</script>

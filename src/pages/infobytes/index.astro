@@ -2,30 +2,36 @@
 import Shell from '../../layouts/Shell.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import Newsletter from '../../components/Newsletter.astro';
+import InfoMenu from '../../components/InfoMenu.astro';
+import WhatsAppChannel from '../../components/WhatsAppChannel.astro';
 import { site } from '../../lib/content.js';
 import { getOps } from '../../lib/ops.js';
 const ops = getOps();
-import { getPosts } from '../../lib/posts.js';
-const posts = getPosts();
-const HASBLOG = posts.length > 0;
 const OPS = ops.map(({ body, ...o }) => o);
 const LOGO = site.infobytes_logo || '';
+const INITIAL_CATEGORY = Astro.url.searchParams.get('cat') || '';
+const INITIAL_QUERY = Astro.url.searchParams.get('q') || '';
 ---
 <Shell title={site.infobytes_title} desc={site.infobytes_description} image={site.infobytes_og_image} header={false} active="info">
 <div class="ih">{LOGO ? <img class="lg" src={LOGO} alt="Infobytes logo" /> : <div class="lg mk">Ib</div>}<div><h2>Infobytes</h2></div><button class="btn tgl" id="th2" aria-label="Toggle light and dark theme"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button></div>
 <Newsletter where="info" />
-<div class="ctl"><input id="q" type="search" placeholder="Search opportunities" aria-label="Search opportunities" /><div class="fl" id="chips"></div></div>
+<InfoMenu active={INITIAL_CATEGORY} query={INITIAL_QUERY} interactive />
 <AdSlot /><div id="il"></div><AdSlot />
-<script define:vars={{ OPS, HASBLOG }}>
-const $=s=>document.querySelector(s),CC={Tech:"#14b8a6",Scholarships:"#d9a441",Grants:"#e8763a",Jobs:"#5b8def",Fellowships:"#d9627f",Other:"#8b7cf6"},cats=["All","Tech","Scholarships","Grants","Jobs","Fellowships","Other"];
-const _q=new URLSearchParams(location.search).get("cat");let F=cats.includes(_q)?_q:"All",Q="",PG=1;const dleft=d=>d?Math.ceil((new Date(d)-new Date())/864e5):Infinity;
+<WhatsAppChannel />
+<script define:vars={{ OPS }}>
+const $=s=>document.querySelector(s),CC={Tech:"#14b8a6",Scholarships:"#d9a441",Grants:"#e8763a",Jobs:"#5b8def",Fellowships:"#d9627f",Other:"#8b7cf6"};
+const form=document.querySelector(".ibtools"),category=form.elements.cat,search=form.elements.q;
+let F=category.value||"All",Q=search.value.trim().toLowerCase(),PG=1;const dleft=d=>d?Math.ceil((new Date(d)-new Date())/864e5):Infinity;
 const iord=(a,b)=>{const x=dleft(a.deadline),y=dleft(b.deadline);if(x===Infinity||y===Infinity)return x===y?0:x===Infinity?-1:1;return (x>0)==(y>0)?(x>0?x-y:y-x):(x>0?-1:1)};
 const thumb=p=>`<div class="tw" style="--c:${CC[p.category]||"#14b8a6"}">${p.image?`<img class="th" src="${p.image}" alt="">`:`<div class="th ph3"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 17l5-5 4 4 3-3 6 5M8.5 9h.01"/></svg></div>`}</div>`;
 const row=p=>{const d=dleft(p.deadline);return `<a class="it" href="/infobytes/${p.slug}/" style="--c:${CC[p.category]||"#14b8a6"}"><div class="im"><small>${p.category}</small><h3>${p.title}</h3><p>${[p.organization,p.location,p.type].filter(Boolean).join(" · ")}</p><span class="dd${d>0&&d<=14?" u":""}">${d===Infinity?"Open":d>0?d+(d==1?" day left":" days left"):"Closed"}</span></div>${thumb(p)}</a>`};
 const pager=(n,sz)=>{const t=Math.ceil(n/sz);if(t<2)return"";const keep=new Set(t<=4?[1,2,3,4]:PG<=2?[1,2,3,t]:PG>=t-1?[1,t-2,t-1,t]:[1,PG,PG+1,t]);let b=`<button class="pb" data-pg="${PG-1}" ${PG<2?"disabled":""} aria-label="Previous page">←<span class="pt"> Prev</span></button>`,last=0;for(let i=1;i<=t;i++){if(!keep.has(i))continue;if(i-last>1)b+=`<span class="pgd" aria-hidden="true">…</span>`;b+=`<button class="pb${i==PG?" on":""}" data-pg="${i}" ${i==PG?'aria-current="page"':""}>${i}</button>`;last=i}return `<div class="pgr">${b}<button class="pb" data-pg="${PG+1}" ${PG>=t?"disabled":""} aria-label="Next page"><span class="pt">Next </span>→</button></div>`};
-function chips(){$("#chips").innerHTML=cats.filter(c=>c=="All"||OPS.some(p=>p.category==c)).map(c=>`<button data-f="${c}" aria-pressed="${c==F}">${c!="All"?`<i style="background:${CC[c]}"></i>`:""}${c}<em>${c=="All"?OPS.length:OPS.filter(p=>p.category==c).length}</em></button>`).join("")+(HASBLOG?'<a class="xl" href="/blog/">Blog →</a>':"")}
 function lst(){const r=OPS.filter(p=>(F=="All"||p.category==F)&&((p.title||"")+(p.organization||"")).toLowerCase().includes(Q)).sort(iord),pg=r.slice((PG-1)*6,PG*6);$("#il").innerHTML=pg.length?`<div class="gg">${pg.map(row).join("")}</div>${pager(r.length,6)}`:`<p class="sub">${OPS.length?"No opportunities match your search.":"No opportunities listed right now. Check back soon."}</p>`}
-document.addEventListener("click",e=>{const g=e.target.closest("[data-pg]");if(g){if(!g.disabled){PG=+g.dataset.pg;lst();$("#il").scrollIntoView({behavior:"smooth"})}return}const b=e.target.closest("[data-f]");if(b){F=b.dataset.f;PG=1;chips();lst();document.querySelector('[data-f="'+F+'"]')?.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})}});
-$("#q").oninput=e=>{Q=e.target.value.toLowerCase();PG=1;lst()};chips();lst();
+function syncUrl(){const u=new URL(location.href);F==="All"?u.searchParams.delete("cat"):u.searchParams.set("cat",F);Q?u.searchParams.set("q",search.value.trim()):u.searchParams.delete("q");history.replaceState({}, "", u)}
+form.addEventListener("submit",e=>{e.preventDefault();F=category.value||"All";Q=search.value.trim().toLowerCase();PG=1;syncUrl();lst()});
+category.addEventListener("change",()=>form.requestSubmit());
+search.addEventListener("input",()=>{Q=search.value.trim().toLowerCase();PG=1;syncUrl();lst()});
+document.addEventListener("click",e=>{const g=e.target.closest("[data-pg]");if(g&&!g.disabled){PG=+g.dataset.pg;lst();$("#il").scrollIntoView({behavior:"smooth"})}});
+lst();
 </script>
 </Shell>
